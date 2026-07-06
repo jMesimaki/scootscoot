@@ -1,0 +1,1423 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>E-Scooter PPGIS Survey</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html, body {
+            height: 100%;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            height: 100vh;
+            height: 100dvh; /* overrides above on browsers that support it */
+            overflow: hidden;
+            background: #f0f4f8;
+        }
+
+        /* ── Top Bar ── */
+        #top-bar {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            height: 56px;
+            background: #1a73e8;
+            color: white;
+            display: flex;
+            align-items: center;
+            padding: 0 16px;
+            z-index: 1000;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+        }
+        #top-bar h1 { font-size: 17px; font-weight: 600; }
+        #point-count {
+            margin-left: auto;
+            background: rgba(255,255,255,0.2);
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        /* ── Map ── */
+        #map {
+            position: fixed;
+            top: 56px;
+            bottom: 68px;
+            left: 0; right: 0;
+            z-index: 1;
+        }
+
+        /* ── Tap hint ── */
+        #tap-hint {
+            position: fixed;
+            top: 68px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.72);
+            color: white;
+            padding: 9px 18px;
+            border-radius: 20px;
+            font-size: 14px;
+            z-index: 500;
+            display: none;
+            pointer-events: none;
+        }
+
+        /* ── Bottom Nav ── */
+        #bottom-nav {
+            position: fixed;
+            bottom: 0; left: 0; right: 0;
+            height: 68px;
+            background: white;
+            display: flex;
+            align-items: center;
+            justify-content: space-around;
+            z-index: 1000;
+            box-shadow: 0 -2px 8px rgba(0,0,0,0.12);
+            padding-bottom: env(safe-area-inset-bottom, 0px);
+        }
+
+        .nav-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 3px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 8px 20px;
+            border-radius: 10px;
+            color: #555;
+            font-size: 11px;
+            font-weight: 500;
+            min-width: 70px;
+        }
+        .nav-btn:active { background: #f0f4f8; }
+        .nav-btn svg { width: 22px; height: 22px; }
+
+        #add-btn {
+            background: #1a73e8;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 58px;
+            height: 58px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 14px rgba(26,115,232,0.45);
+            transition: transform 0.15s, background 0.2s;
+            position: relative;
+            top: -14px;
+            flex-shrink: 0;
+        }
+        #add-btn:active { transform: scale(0.93); }
+        #add-btn.active { background: #c62828; }
+
+        /* ── Sheet Overlay ── */
+        #sheet-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.45);
+            z-index: 2000;
+            display: none;
+            align-items: flex-end;
+            opacity: 0;
+            transition: opacity 0.28s;
+        }
+        #sheet-overlay.visible { display: flex; }
+        #sheet-overlay.open { opacity: 1; }
+
+        /* ── Bottom Sheet ── */
+        #bottom-sheet {
+            background: white;
+            width: 100%;
+            max-height: 92vh;
+            max-height: 92dvh;
+            border-radius: 20px 20px 0 0;
+            overflow-y: auto;
+            transform: translateY(100%);
+            transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
+            padding-bottom: env(safe-area-inset-bottom, 16px);
+            overscroll-behavior: contain;
+        }
+        #bottom-sheet.open { transform: translateY(0); }
+
+        .sheet-handle {
+            width: 40px; height: 4px;
+            background: #ddd;
+            border-radius: 2px;
+            margin: 12px auto 4px;
+        }
+
+        .sheet-header {
+            padding: 8px 20px 14px;
+            border-bottom: 1px solid #f0f0f0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .sheet-header h2 { font-size: 17px; font-weight: 600; color: #111; }
+        .sheet-coords { font-size: 12px; color: #999; margin-top: 3px; }
+
+        #close-sheet {
+            background: #f0f0f0;
+            border: none;
+            border-radius: 50%;
+            width: 34px; height: 34px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 17px;
+            color: #555;
+            flex-shrink: 0;
+        }
+
+        /* ── Form ── */
+        .form-body { padding: 16px 20px; }
+
+        .form-section { margin-bottom: 22px; }
+
+        .section-title {
+            font-size: 11px;
+            font-weight: 700;
+            color: #1a73e8;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            margin-bottom: 14px;
+        }
+
+        .form-group { margin-bottom: 14px; }
+
+        .form-group label {
+            display: block;
+            font-size: 14px;
+            color: #333;
+            margin-bottom: 7px;
+            font-weight: 500;
+            line-height: 1.4;
+        }
+        .required { color: #c62828; margin-left: 2px; }
+
+        .form-group input[type="number"],
+        .form-group input[type="text"],
+        .form-group select {
+            width: 100%;
+            padding: 13px 14px;
+            border: 1.5px solid #ddd;
+            border-radius: 10px;
+            font-size: 16px;
+            color: #111;
+            background: #fafafa;
+            -webkit-appearance: none;
+            appearance: none;
+            transition: border-color 0.2s, background 0.2s;
+        }
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #1a73e8;
+            background: white;
+        }
+        .form-group input[readonly] {
+            background: #f5f5f5;
+            color: #666;
+        }
+
+        /* stepper row */
+        .num-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .num-row input { flex: 1; }
+        .steppers { display: flex; gap: 4px; }
+        .step-btn {
+            width: 44px; height: 48px;
+            border: 1.5px solid #ddd;
+            border-radius: 10px;
+            background: white;
+            font-size: 22px;
+            cursor: pointer;
+            color: #333;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            touch-action: manipulation;
+            user-select: none;
+        }
+        .step-btn:active { background: #f0f4f8; }
+
+        /* photo input */
+        .photo-input-area {
+            width: 100%;
+            padding: 14px;
+            border: 1.5px dashed #ccc;
+            border-radius: 10px;
+            font-size: 14px;
+            background: #fafafa;
+            cursor: pointer;
+            color: #555;
+            text-align: center;
+        }
+        .photo-input-area input[type="file"] {
+            display: none;
+        }
+
+        #photo-preview {
+            display: none;
+            margin-top: 10px;
+            position: relative;
+        }
+        #photo-preview img {
+            width: 100%;
+            max-height: 200px;
+            object-fit: cover;
+            border-radius: 10px;
+            display: block;
+        }
+        #remove-photo-btn {
+            position: absolute;
+            top: 8px; right: 8px;
+            background: rgba(0,0,0,0.6);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 30px; height: 30px;
+            font-size: 16px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* sum warning */
+        #sum-warning {
+            display: none;
+            background: #fff8e1;
+            border: 1.5px solid #ffc107;
+            color: #e65100;
+            padding: 11px 14px;
+            border-radius: 10px;
+            font-size: 13px;
+            margin-top: 4px;
+            line-height: 1.5;
+        }
+
+        /* save button */
+        #save-btn {
+            width: 100%;
+            padding: 16px;
+            background: #1a73e8;
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 6px;
+            transition: background 0.2s;
+            touch-action: manipulation;
+        }
+        #save-btn:active { background: #1557b0; }
+        #save-btn:disabled { background: #aaa; cursor: not-allowed; }
+
+        /* ── Full-screen Panels ── */
+        .full-panel {
+            position: fixed;
+            inset: 0;
+            background: white;
+            z-index: 3000;
+            display: none;
+            flex-direction: column;
+        }
+        .full-panel.open { display: flex; }
+
+        .panel-header {
+            background: #1a73e8;
+            color: white;
+            padding: 16px 20px;
+            padding-top: max(16px, env(safe-area-inset-top));
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            flex-shrink: 0;
+        }
+        .panel-header h2 { font-size: 18px; flex: 1; }
+        .back-btn {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 26px;
+            cursor: pointer;
+            line-height: 1;
+            padding: 2px 4px;
+        }
+
+        .panel-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 14px;
+            overscroll-behavior: contain;
+        }
+
+        /* ── Points List ── */
+        .point-card {
+            background: white;
+            border: 1px solid #e8e8e8;
+            border-radius: 12px;
+            padding: 14px 16px;
+            margin-bottom: 10px;
+            box-shadow: 0 1px 5px rgba(0,0,0,0.06);
+        }
+        .pc-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 7px;
+        }
+        .pc-title { font-weight: 600; font-size: 15px; color: #111; }
+        .pc-sub { font-size: 12px; color: #888; margin-top: 2px; }
+        .pc-detail { font-size: 13px; color: #555; line-height: 1.7; }
+        .delete-btn {
+            background: #ffebee;
+            color: #c62828;
+            border: none;
+            border-radius: 8px;
+            padding: 7px 12px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            flex-shrink: 0;
+            margin-left: 8px;
+        }
+        .pc-thumb {
+            width: 72px; height: 72px;
+            object-fit: cover;
+            border-radius: 8px;
+            margin-top: 8px;
+            float: right;
+            margin-left: 10px;
+        }
+
+        /* ── Export Panel ── */
+        .export-info-box {
+            background: #e8f0fe;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 22px;
+            font-size: 14px;
+            color: #1557b0;
+            line-height: 1.7;
+        }
+        .export-info-box code {
+            background: rgba(26,115,232,0.12);
+            padding: 1px 5px;
+            border-radius: 4px;
+            font-size: 13px;
+        }
+        .btn-export {
+            width: 100%;
+            padding: 16px;
+            background: #1a73e8;
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-bottom: 10px;
+            touch-action: manipulation;
+        }
+        .btn-export:active { background: #1557b0; }
+        .btn-danger {
+            width: 100%;
+            padding: 14px;
+            background: #ffebee;
+            color: #c62828;
+            border: 1.5px solid #ffcdd2;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 500;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+        .export-note {
+            font-size: 13px;
+            color: #888;
+            text-align: center;
+            margin-top: 8px;
+            line-height: 1.5;
+        }
+
+        /* ── Empty state ── */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #aaa;
+        }
+        .empty-state p { font-size: 15px; line-height: 1.6; margin-top: 12px; }
+
+        /* ── Toast ── */
+        #toast {
+            position: fixed;
+            bottom: 82px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.78);
+            color: white;
+            padding: 11px 20px;
+            border-radius: 22px;
+            font-size: 14px;
+            z-index: 5000;
+            display: none;
+            max-width: 88vw;
+            text-align: center;
+            line-height: 1.5;
+        }
+
+        /* ── Locate button ── */
+        #locate-btn {
+            position: fixed;
+            bottom: 82px;
+            right: 12px;
+            width: 44px; height: 44px;
+            background: white;
+            border: none;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.22);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 500;
+        }
+        #locate-btn:active { background: #f0f4f8; }
+
+        /* ── Leaflet popup ── */
+        .leaflet-popup-content { min-width: 170px; font-size: 13px; line-height: 1.6; }
+        .popup-title { font-size: 15px; font-weight: 700; color: #1a73e8; margin-bottom: 4px; }
+        .popup-thumb { width: 100%; max-height: 110px; object-fit: cover; border-radius: 6px; margin-top: 8px; display: block; }
+
+        /* Leaflet zoom */
+        .leaflet-control-zoom { margin-right: 10px !important; margin-top: 70px !important; }
+    </style>
+</head>
+<body>
+
+<!-- Top Bar -->
+<div id="top-bar">
+    <h1>🛴 E-Scooter Survey</h1>
+    <span id="point-count">0 points</span>
+</div>
+
+<!-- Map -->
+<div id="map"></div>
+
+<!-- Tap-mode hint -->
+<div id="tap-hint">📍 Tap the map to place a point</div>
+
+<!-- Bottom Navigation -->
+<div id="bottom-nav">
+    <button class="nav-btn" onclick="openPanel('points')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+        </svg>
+        Points
+    </button>
+
+    <button id="add-btn" onclick="toggleAddMode()" aria-label="Add observation">
+        <svg id="add-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="28" height="28">
+            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+        </svg>
+    </button>
+
+    <button class="nav-btn" onclick="openPanel('export')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/>
+        </svg>
+        Export
+    </button>
+</div>
+
+<!-- Locate me button -->
+<button id="locate-btn" onclick="locateMe()" aria-label="Centre map on my location">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1a73e8" stroke-width="2.2">
+        <circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>
+        <circle cx="12" cy="12" r="8" stroke-dasharray="3 2"/>
+    </svg>
+</button>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<!-- ═══════════════════════════════════════════
+     BOTTOM SHEET — Add Observation Form
+     ═══════════════════════════════════════════ -->
+<div id="sheet-overlay" onclick="handleOverlayClick(event)">
+    <div id="bottom-sheet">
+        <div class="sheet-handle"></div>
+
+        <div class="sheet-header">
+            <div>
+                <h2>New Observation</h2>
+                <div class="sheet-coords" id="sheet-coords"></div>
+            </div>
+            <button id="close-sheet" onclick="closeSheet(true)">✕</button>
+        </div>
+
+        <div class="form-body">
+
+            <!-- E-Scooter Counts -->
+            <div class="form-section">
+                <div class="section-title">E-Scooter Counts</div>
+
+                <div class="form-group">
+                    <label for="f-total">Total e-scooters at location <span class="required">*</span></label>
+                    <div class="num-row">
+                        <input type="number" id="f-total" min="0" placeholder="0" inputmode="numeric" oninput="validateSum()">
+                        <div class="steppers">
+                            <button class="step-btn" onclick="step('f-total',-1)">−</button>
+                            <button class="step-btn" onclick="step('f-total', 1)">+</button>
+                        </div>
+                    </div>
+                    <div style="font-size:12px;color:#888;margin-top:5px;">Includes all scooters, whether correctly parked or not.</div>
+                </div>
+
+                <div class="form-group">
+                    <label for="f-obstructing">Outside square — obstructing pedestrian or cycle path</label>
+                    <div class="num-row">
+                        <input type="number" id="f-obstructing" min="0" value="0" inputmode="numeric" oninput="validateSum()">
+                        <div class="steppers">
+                            <button class="step-btn" onclick="step('f-obstructing',-1)">−</button>
+                            <button class="step-btn" onclick="step('f-obstructing', 1)">+</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="f-notblocking">Outside square — not blocking pedestrian path</label>
+                    <div class="num-row">
+                        <input type="number" id="f-notblocking" min="0" value="0" inputmode="numeric" oninput="validateSum()">
+                        <div class="steppers">
+                            <button class="step-btn" onclick="step('f-notblocking',-1)">−</button>
+                            <button class="step-btn" onclick="step('f-notblocking', 1)">+</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="f-partial">Partially outside square</label>
+                    <div class="num-row">
+                        <input type="number" id="f-partial" min="0" value="0" inputmode="numeric" oninput="validateSum()">
+                        <div class="steppers">
+                            <button class="step-btn" onclick="step('f-partial',-1)">−</button>
+                            <button class="step-btn" onclick="step('f-partial', 1)">+</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="f-bikerack">Parked in bike parking rack</label>
+                    <div class="num-row">
+                        <input type="number" id="f-bikerack" min="0" value="0" inputmode="numeric" oninput="validateSum()">
+                        <div class="steppers">
+                            <button class="step-btn" onclick="step('f-bikerack',-1)">−</button>
+                            <button class="step-btn" onclick="step('f-bikerack', 1)">+</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="f-roadway">Parked in the roadway</label>
+                    <div class="num-row">
+                        <input type="number" id="f-roadway" min="0" value="0" inputmode="numeric" oninput="validateSum()">
+                        <div class="steppers">
+                            <button class="step-btn" onclick="step('f-roadway',-1)">−</button>
+                            <button class="step-btn" onclick="step('f-roadway', 1)">+</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="sum-warning">
+                    ⚠️ The sum of parking categories (<strong id="sum-val">0</strong>) exceeds the total e-scooters (<strong id="total-val">0</strong>). Please check your counts before saving.
+                </div>
+            </div>
+
+            <!-- Conditions -->
+            <div class="form-section">
+                <div class="section-title">Conditions</div>
+
+                <div class="form-group">
+                    <label for="f-time">Time of observation <span class="required">*</span></label>
+                    <input type="text" id="f-time" readonly>
+                </div>
+
+                <div class="form-group">
+                    <label for="f-weather">Weather</label>
+                    <select id="f-weather">
+                        <option value="">— Select weather —</option>
+                        <option value="Sunny">☀️ Sunny</option>
+                        <option value="Overcast">☁️ Overcast</option>
+                        <option value="Rainy">🌧️ Rainy</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Observer -->
+            <div class="form-section">
+                <div class="section-title">Observer</div>
+
+                <div class="form-group">
+                    <label for="f-observer">Data collector name <span class="required">*</span></label>
+                    <input type="text" id="f-observer" placeholder="Enter your name" autocomplete="name">
+                </div>
+            </div>
+
+            <!-- Photo -->
+            <div class="form-section">
+                <div class="section-title">Photo (optional)</div>
+
+                <div class="form-group">
+                    <label class="photo-input-area" for="f-photo">
+                        📷 Tap to take a photo or choose from gallery
+                        <input type="file" id="f-photo" accept="image/*" onchange="previewPhoto(this)">
+                    </label>
+                    <div id="photo-preview">
+                        <img id="photo-img" src="" alt="Preview">
+                        <button id="remove-photo-btn" onclick="removePhoto()">✕</button>
+                    </div>
+                </div>
+            </div>
+
+            <button id="save-btn" onclick="savePoint()">💾 Save Observation</button>
+            <div style="height: 24px;"></div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     POINTS LIST PANEL
+     ═══════════════════════════════════════════ -->
+<div id="points-panel" class="full-panel">
+    <div class="panel-header">
+        <button class="back-btn" onclick="closePanel()">‹</button>
+        <h2>Recorded Points</h2>
+    </div>
+    <div class="panel-body" id="points-list"></div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     EXPORT PANEL
+     ═══════════════════════════════════════════ -->
+<div id="export-panel" class="full-panel">
+    <div class="panel-header">
+        <button class="back-btn" onclick="closePanel()">‹</button>
+        <h2>Export Data</h2>
+    </div>
+    <div class="panel-body">
+        <div class="export-info-box" id="export-info">Loading…</div>
+
+        <button class="btn-export" onclick="exportData()">
+            📦 Download ZIP (CSV + Photos)
+        </button>
+        <p class="export-note">
+            Downloads a ZIP containing <code>observations.csv</code> with all recorded<br>
+            points and coordinates, plus a <code>photos/</code> folder with all images.
+        </p>
+
+        <button class="btn-danger" onclick="confirmClear()">
+            🗑️ Clear All Data From Device
+        </button>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     SCRIPTS
+     ═══════════════════════════════════════════ -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script>
+'use strict';
+
+// ═══════════════════════════════════════════════
+// Polygon Underlay — light green, 15% opacity
+// ═══════════════════════════════════════════════
+const POLYGON_GEOJSON = {"type": "FeatureCollection","name": "Makkara2Geojson","crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" } },"features": [{ "type": "Feature", "properties": { "fid": 1, "Route": "TorkkeliLoop", "length": 3.4102203101087101 }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ 24.939692786938874, 60.184482011175781 ], [ 24.939659706424798, 60.184623642376913 ], [ 24.939717481543987, 60.184763295123794 ], [ 24.939860283746608, 60.184886878151161 ], [ 24.941041845359791, 60.185612022545143 ], [ 24.941248688495335, 60.185704941181342 ], [ 24.941502623861307, 60.185761968068832 ], [ 24.941779396377065, 60.185777656140722 ], [ 24.94205256936176, 60.185750506902309 ], [ 24.942296049987071, 60.185683113581909 ], [ 24.943019484263328, 60.185402088816282 ], [ 24.943044781300603, 60.185418695712464 ], [ 24.942936084137312, 60.18553777230148 ], [ 24.942609739082332, 60.186163669750442 ], [ 24.942581374626347, 60.186292429741158 ], [ 24.942628019793638, 60.18641986228711 ], [ 24.942745791144702, 60.186535355741491 ], [ 24.942924882121943, 60.186629292553143 ], [ 24.943150379495837, 60.186693850195034 ], [ 24.943403505203605, 60.186723652631507 ], [ 24.947295219403845, 60.186893347404492 ], [ 24.947315418778956, 60.18689411407631 ], [ 24.951311056798414, 60.187023235821115 ], [ 24.951592345020444, 60.18701022902485 ], [ 24.951851732963043, 60.186954499906584 ], [ 24.952063741100631, 60.186861522735207 ], [ 24.952207544465399, 60.186740430599997 ], [ 24.952269018268044, 60.186603118197375 ], [ 24.95235105156668, 60.185945141571771 ], [ 24.952390654945397, 60.185945333633804 ], [ 24.952280316988109, 60.186978242333772 ], [ 24.952314862110434, 60.187127369872911 ], [ 24.952446211343602, 60.187262485853111 ], [ 24.952625658601299, 60.18738796285762 ], [ 24.95278813621351, 60.187474592310124 ], [ 24.95299048534233, 60.18753702069241 ], [ 24.953218594459216, 60.187570894282509 ], [ 24.95559336102124, 60.187758532138517 ], [ 24.957070059660403, 60.187906467169078 ], [ 24.956181392744124, 60.187907666531707 ], [ 24.953372014868869, 60.187869149391005 ], [ 24.953266969983037, 60.187870760160379 ], [ 24.952284413843913, 60.187914474013269 ], [ 24.952076558589777, 60.187936231704342 ], [ 24.951884696691231, 60.187981605308401 ], [ 24.948985609406833, 60.188889599882323 ], [ 24.948773625122538, 60.188981849989233 ], [ 24.948629124951523, 60.189102164689807 ], [ 24.948566203792549, 60.18923880884774 ], [ 24.948500761993028, 60.189713049014493 ], [ 24.948499608834439, 60.189723029323794 ], [ 24.948448368711471, 60.190273275812686 ], [ 24.948485445691421, 60.190423097168186 ], [ 24.948620169240762, 60.190558326217968 ], [ 24.948876724278954, 60.190733736715956 ], [ 24.94906563780264, 60.190828989013895 ], [ 24.949302563333649, 60.190892263982107 ], [ 24.949566426974489, 60.190917933420124 ], [ 24.949833758457196, 60.190903714062863 ], [ 24.950080779012431, 60.190850870698256 ], [ 24.953081943231222, 60.189923336601979 ], [ 24.955937410988643, 60.189758934026479 ], [ 24.962266129986581, 60.189785492534746 ], [ 24.962566385760759, 60.189761185664679 ], [ 24.962833308295203, 60.189688531017012 ], [ 24.963036500582188, 60.189575802543693 ], [ 24.963152823876506, 60.189435837728745 ], [ 24.963155720696193, 60.189408804300015 ], [ 24.963334450651288, 60.189488893891621 ], [ 24.963592653922536, 60.189546007369621 ], [ 24.963873679279896, 60.189560514530477 ], [ 24.964271363338106, 60.189549797167416 ], [ 24.964534555521301, 60.189522725419806 ], [ 24.964770023178236, 60.189458219759707 ], [ 24.964956836620225, 60.189362013866806 ], [ 24.965078391245875, 60.189242659085622 ], [ 24.965123883407657, 60.18911076427154 ], [ 24.965089270487208, 60.188978052772924 ], [ 24.964496954963852, 60.187947543458776 ], [ 24.964412595345845, 60.187848013402565 ], [ 24.964282927172814, 60.187761402879573 ], [ 24.963566907253021, 60.187387198380364 ], [ 24.96329745384713, 60.187290535685484 ], [ 24.962466862206124, 60.187096310498738 ], [ 24.962325687462329, 60.186979582666204 ], [ 24.962093682374594, 60.186209849644186 ], [ 24.961897518679987, 60.185284036015148 ], [ 24.961786396155865, 60.185110764013153 ], [ 24.960870775190912, 60.184301553491508 ], [ 24.960852909968523, 60.18428646052643 ], [ 24.959107470913324, 60.182875484059927 ], [ 24.959005219353944, 60.18280800022589 ], [ 24.95763260008027, 60.182060441882264 ], [ 24.957527198733846, 60.182011533188678 ], [ 24.955430409310129, 60.18118407394531 ], [ 24.955388017175121, 60.181168329783432 ], [ 24.953044875799257, 60.18035021922578 ], [ 24.952815432076999, 60.180265344064431 ], [ 24.952863073318493, 60.180230824328788 ], [ 24.953012894947278, 60.180038851153931 ], [ 24.953067112558898, 60.179846193808487 ], [ 24.95306118768341, 60.179703269918377 ], [ 24.952965350527279, 60.179568521728768 ], [ 24.952789322029385, 60.179455615570994 ], [ 24.952550955740566, 60.179376002403188 ], [ 24.952218127562919, 60.179299817739043 ], [ 24.952270853042972, 60.178453164505818 ], [ 24.952236837974631, 60.178316320476931 ], [ 24.952121041481959, 60.178191076007352 ], [ 24.951934391076012, 60.178089249279346 ], [ 24.95169449964477, 60.178020448657648 ], [ 24.951424003420293, 60.177991166113586 ], [ 24.949954045270417, 60.17794732366081 ], [ 24.949670902888819, 60.177961293165858 ], [ 24.949410617812571, 60.178018541767003 ], [ 24.949199139180351, 60.178113362094223 ], [ 24.949057550855237, 60.178236301025969 ], [ 24.948999969455929, 60.17837510204032 ], [ 24.948824372648556, 60.180307000619372 ], [ 24.948804558531421, 60.180301359517273 ], [ 24.948365767022405, 60.180129942234821 ], [ 24.948151949107796, 60.180067915117306 ], [ 24.947912323940184, 60.180037191572495 ], [ 24.947558848906841, 60.18001699309054 ], [ 24.947209972071079, 60.180031139163276 ], [ 24.94689823198798, 60.180110430219393 ], [ 24.946588939918726, 60.18023187501646 ], [ 24.945900911072641, 60.180406710164135 ], [ 24.945354823640582, 60.180445115978891 ], [ 24.9440601833751, 60.180425038013112 ], [ 24.943089711455475, 60.180360736151805 ], [ 24.942824800690147, 60.180362752010822 ], [ 24.9419928136798, 60.180430820325157 ], [ 24.941745795774949, 60.180469835781992 ], [ 24.941115469419575, 60.180622016142692 ], [ 24.940911652155876, 60.180689641465221 ], [ 24.940136437071025, 60.181030986803563 ], [ 24.940085716832218, 60.18105513557731 ], [ 24.939322024604305, 60.181448191788448 ], [ 24.939191395148871, 60.181533995491606 ], [ 24.938894684650244, 60.181787063256515 ], [ 24.938778384412355, 60.181958855907752 ], [ 24.938718865601807, 60.182200887426426 ], [ 24.938721121080981, 60.182318530784684 ], [ 24.938769584501269, 60.182488618342198 ], [ 24.938863839534786, 60.182634117018502 ], [ 24.939045212067164, 60.182806271378475 ], [ 24.93914919358247, 60.182884039233862 ], [ 24.939564236543646, 60.183133600130418 ], [ 24.940799730349887, 60.183944790207853 ], [ 24.940009328820647, 60.184248733814037 ], [ 24.939813384119404, 60.184352692239372 ], [ 24.939692786938874, 60.184482011175781 ] ], [ [ 24.945666858897699, 60.185095303848037 ], [ 24.945819200756809, 60.185161256994718 ], [ 24.946040449851278, 60.185208960494833 ], [ 24.946030564758608, 60.185271990851341 ], [ 24.945275286389816, 60.185247790189393 ], [ 24.945666858897699, 60.185095303848037 ] ], [ [ 24.949094921095785, 60.184258348645805 ], [ 24.949074636698409, 60.184271479626112 ], [ 24.948981449935012, 60.184431793166532 ], [ 24.948911440436838, 60.184798465717932 ], [ 24.947768831115049, 60.184777325645726 ], [ 24.949094921095785, 60.184258348645805 ] ], [ [ 24.95190055729044, 60.183160239770793 ], [ 24.952282971406756, 60.183400902888209 ], [ 24.952275956842563, 60.183419537386222 ], [ 24.95226214624979, 60.18347532418759 ], [ 24.952226563547146, 60.183770199020138 ], [ 24.950606316239856, 60.183725300826751 ], [ 24.950424142583298, 60.183738116135558 ], [ 24.95190055729044, 60.183160239770793 ] ], [ [ 24.952072605237564, 60.185045989366401 ], [ 24.951513256111149, 60.18504327429001 ], [ 24.951243322237158, 60.185062507121465 ], [ 24.950997290124562, 60.185121063047973 ], [ 24.950797678457104, 60.185213582634297 ], [ 24.950662757600462, 60.185331597809167 ], [ 24.950604877345267, 60.185464306860922 ], [ 24.950525811278688, 60.186098224016682 ], [ 24.947590788265071, 60.186003368876676 ], [ 24.947693803276564, 60.185918754661351 ], [ 24.947758524495491, 60.18578331202341 ], [ 24.947775376397228, 60.185675824676032 ], [ 24.949694730906014, 60.185711329317947 ], [ 24.949964684229776, 60.185695908777696 ], [ 24.950213141713391, 60.185641121493141 ], [ 24.95041752195775, 60.185551946911062 ], [ 24.950559249988942, 60.185436489786682 ], [ 24.950625445469736, 60.1853052435089 ], [ 24.950742475598009, 60.184692138608341 ], [ 24.950877984973253, 60.184631978169037 ], [ 24.952118420269972, 60.184666349963173 ], [ 24.952072605237564, 60.185045989366401 ] ], [ [ 24.96196189553195, 60.188290477125456 ], [ 24.962312198576434, 60.188400958590485 ], [ 24.962447885944563, 60.188577278726527 ], [ 24.961837740326061, 60.188258911865589 ], [ 24.96196189553195, 60.188290477125456 ] ], [ [ 24.94331600081642, 60.184111362041193 ], [ 24.949543167003654, 60.18171620682898 ], [ 24.949555536191493, 60.181724040137567 ], [ 24.943351376391298, 60.18413458592876 ], [ 24.94331600081642, 60.184111362041193 ] ], [ [ 24.940964669201438, 60.182568311455768 ], [ 24.940597471452929, 60.182347525431695 ], [ 24.940532288437698, 60.182285658235955 ], [ 24.94052244668865, 60.182251124133607 ], [ 24.940544885695509, 60.182159856492063 ], [ 24.940692975594612, 60.182033543728657 ], [ 24.941356530411344, 60.181692018955111 ], [ 24.942012845205653, 60.18140302415032 ], [ 24.942414141694805, 60.181306138242 ], [ 24.942984790110774, 60.18125945118318 ], [ 24.943867726427083, 60.181317952612147 ], [ 24.943958499182077, 60.18132165423814 ], [ 24.945376125479896, 60.181343639561128 ], [ 24.945530155422972, 60.181339448388684 ], [ 24.946302172037779, 60.181285153053103 ], [ 24.946585710239731, 60.181240534555904 ], [ 24.94748687783051, 60.181011537684419 ], [ 24.947605237926325, 60.180973777529211 ], [ 24.947744044760242, 60.181028003754356 ], [ 24.94785299272473, 60.1810645098303 ], [ 24.94810327928921, 60.181135767108259 ], [ 24.942226518732326, 60.183396101960632 ], [ 24.940988646237994, 60.182583373198113 ], [ 24.940964669201438, 60.182568311455768 ] ], [ [ 24.941884480170923, 60.184704434652041 ], [ 24.941841847672546, 60.184678271071903 ], [ 24.941889199089587, 60.18466006189427 ], [ 24.941929907894707, 60.184686787778077 ], [ 24.941884480170923, 60.184704434652041 ] ], [ [ 24.950723388849028, 60.18247918720445 ], [ 24.946417399010169, 60.184164444429605 ], [ 24.946317083785452, 60.184120993979178 ], [ 24.95065553102436, 60.182435257907969 ], [ 24.950723388849028, 60.18247918720445 ] ], [ [ 24.950922566430499, 60.179991274697635 ], [ 24.950986363000155, 60.180005878335699 ], [ 24.950838176764581, 60.180113244554441 ], [ 24.950780091732245, 60.180173881021645 ], [ 24.950726832122552, 60.180224622605031 ], [ 24.950724276415006, 60.180232147836648 ], [ 24.950716758679761, 60.180239995744998 ], [ 24.950699645807994, 60.180304671999075 ], [ 24.950679803887439, 60.1803630957588 ], [ 24.950682119839083, 60.180370909232302 ], [ 24.950679917624662, 60.180379232209681 ], [ 24.950702942544147, 60.180441159954889 ], [ 24.950720984899576, 60.180502030219337 ], [ 24.950728305784729, 60.180509376573042 ], [ 24.950731260898607, 60.180517324587875 ], [ 24.950789338559595, 60.180570621532063 ], [ 24.950846345111593, 60.180627826041508 ], [ 24.950858302376069, 60.180633908272483 ], [ 24.95086576367644, 60.180640755344726 ], [ 24.950950869117367, 60.180680993536953 ], [ 24.951043614054235, 60.180728169243892 ], [ 24.95198015520004, 60.181074621247753 ], [ 24.952000166979225, 60.181081814356574 ], [ 24.954331778848417, 60.181895909177427 ], [ 24.956351214355088, 60.182692853722124 ], [ 24.95761753037646, 60.183382532536079 ], [ 24.958541470247656, 60.184129470474176 ], [ 24.957671349578028, 60.183897751106826 ], [ 24.957459351932094, 60.183857428508759 ], [ 24.957233851659655, 60.183844757082525 ], [ 24.955380901291552, 60.183857550808412 ], [ 24.954026356779966, 60.183820049207732 ], [ 24.954058051046164, 60.18355727907359 ], [ 24.954130282732983, 60.183365363612637 ], [ 24.954141241944129, 60.183238009708631 ], [ 24.95407988209724, 60.183114256515154 ], [ 24.953951152100611, 60.183004083653124 ], [ 24.952727841683654, 60.182234237359935 ], [ 24.952712487520827, 60.182224838018193 ], [ 24.951485921350642, 60.181494316396126 ], [ 24.95057322673221, 60.180916331901152 ], [ 24.950665714409162, 60.179898249591929 ], [ 24.950702261497799, 60.179919824341383 ], [ 24.950922566430499, 60.179991274697635 ] ], [ [ 24.960302764604769, 60.186312663102278 ], [ 24.960182476899472, 60.186148357194412 ], [ 24.960183498154077, 60.186070200448498 ], [ 24.960209799029123, 60.185873796424204 ], [ 24.960302764604769, 60.186312663102278 ] ], [ [ 24.955930706856762, 60.186876582983153 ], [ 24.955894163216396, 60.186873310308783 ], [ 24.954111835071611, 60.186732487658702 ], [ 24.954176687588671, 60.186125068164422 ], [ 24.954384585863988, 60.186074966649272 ], [ 24.95458420655806, 60.185981160913521 ], [ 24.954717884569426, 60.185861785140297 ], [ 24.954773225647227, 60.185727908190984 ], [ 24.954823451406011, 60.185229893187525 ], [ 24.955063653710429, 60.185164249511601 ], [ 24.955064879204137, 60.185163913984475 ], [ 24.955167600182307, 60.185135738305668 ], [ 24.955625493179003, 60.185507756519492 ], [ 24.955519679858934, 60.185508907957114 ], [ 24.95525047838477, 60.18555633146542 ], [ 24.955024572011794, 60.185643312188397 ], [ 24.954864633989366, 60.185761120400052 ], [ 24.954786717222031, 60.185897932304691 ], [ 24.954681834751288, 60.186341185433967 ], [ 24.954694710122823, 60.186485562947482 ], [ 24.954799040039774, 60.186620420130097 ], [ 24.954984010940493, 60.186731778011179 ], [ 24.955230449680585, 60.186808093373827 ], [ 24.955512810854064, 60.186841455395836 ], [ 24.956431081095452, 60.18687409669117 ], [ 24.9564741029041, 60.186903968959889 ], [ 24.956516691899321, 60.186935288783197 ], [ 24.955930706856762, 60.186876582983153 ] ], [ [ 24.957615004343484, 60.184900791205074 ], [ 24.958075167467996, 60.185162963330257 ], [ 24.958342324120828, 60.185447913266188 ], [ 24.958409819180574, 60.185823797972986 ], [ 24.958383011002862, 60.186023908472251 ], [ 24.958381030865276, 60.186050857109933 ], [ 24.958378768336978, 60.186223284563681 ], [ 24.958433267681531, 60.186379963269616 ], [ 24.958546332961717, 60.186534415477922 ], [ 24.95832470092056, 60.186511398273645 ], [ 24.958200695411616, 60.186502940582024 ], [ 24.958101476516227, 60.186499643762211 ], [ 24.957959946410654, 60.186395566678897 ], [ 24.957946061990384, 60.186385646889839 ], [ 24.957576529255871, 60.186129067076784 ], [ 24.957780017234203, 60.186036061052413 ], [ 24.957919879573073, 60.18591086671065 ], [ 24.957973412259239, 60.185770102831853 ], [ 24.957935163209878, 60.185628108534708 ], [ 24.957809029798046, 60.185499348097025 ], [ 24.957200376661682, 60.185069454042377 ], [ 24.956801735481459, 60.184745589021517 ], [ 24.95702638507165, 60.184744036969676 ], [ 24.957615004343484, 60.184900791205074 ] ], [ [ 24.952660912046312, 60.188799058635311 ], [ 24.953374979127197, 60.188767289489803 ], [ 24.956145425483026, 60.188805272558085 ], [ 24.956172650997722, 60.188805440686288 ], [ 24.958368342709722, 60.188802467041867 ], [ 24.958449604626772, 60.188800528101737 ], [ 24.960225541118902, 60.188718013487936 ], [ 24.960536882164309, 60.188880474436623 ], [ 24.955896909792418, 60.18886097189678 ], [ 24.955785716850091, 60.188863927486857 ], [ 24.952674478626609, 60.189043054600965 ], [ 24.952302612414396, 60.189107577885132 ], [ 24.950306302828597, 60.18972456647235 ], [ 24.950333411279288, 60.189528041664886 ], [ 24.952660912046312, 60.188799058635311 ] ] ] ] } }]};
+
+// ═══════════════════════════════════════════════
+// GeoJSON Overlay — paste your WGS84 GeoJSON here
+// ═══════════════════════════════════════════════
+const OVERLAY_GEOJSON = {
+"type": "FeatureCollection",
+"name": "Route2",
+"crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" } },
+"features": [
+{ "type": "Feature", "properties": { "fid": 1, "Route": "TorkkeliLoop", "length": 3.4102203101087101 }, "geometry": { "type": "MultiLineString", "coordinates": [ [ [ 24.951580938166021, 60.180367805523282 ], [ 24.952517474864926, 60.180714253724851 ], [ 24.954870733900226, 60.181535901721254 ], [ 24.956967531313634, 60.1823633698192 ], [ 24.958340147831457, 60.18311093500531 ], [ 24.960085566044842, 60.184521921425414 ], [ 24.961001173599662, 60.18533113727888 ], [ 24.961199386461264, 60.186266742397052 ], [ 24.96146094630895, 60.187134606636647 ], [ 24.961835954725586, 60.187444681310325 ], [ 24.962914337497267, 60.187696852069159 ], [ 24.963630356589906, 60.188071060073213 ], [ 24.964222647014722, 60.189101573115487 ], [ 24.96382496836911, 60.189112290360377 ], [ 24.963046966942301, 60.188101361529291 ], [ 24.962408935171556, 60.187900135714827 ], [ 24.962059622189145, 60.187811326270975 ], [ 24.959584655846026, 60.187670178141069 ], [ 24.957721721799732, 60.187513874203404 ], [ 24.95575293407726, 60.187316645786105 ], [ 24.95335985888223, 60.187127561700393 ], [ 24.953180410202986, 60.187002085678138 ], [ 24.953322225635635, 60.185674153067531 ], [ 24.953059056676015, 60.185468852717044 ], [ 24.952937777321793, 60.185358999188416 ], [ 24.953161793041993, 60.18350225007606 ], [ 24.953244447645723, 60.183282657399992 ], [ 24.95202114367784, 60.182512804646422 ], [ 24.950785912736997, 60.181777112965861 ], [ 24.949657804131459, 60.18106269929325 ], [ 24.949900177008544, 60.178395400671903 ], [ 24.951370155090196, 60.178439243820655 ], [ 24.95129887028353, 60.179583403179137 ], [ 24.952174669770457, 60.179783877579531 ], [ 24.95212044704806, 60.179976534535577 ], [ 24.951580796037884, 60.180367541492586 ] ] ] } },
+{ "type": "Feature", "properties": { "fid": 2, "Route": "Vaasankatu", "length": 1.737768246893959 }, "geometry": { "type": "MultiLineString", "coordinates": [ [ [ 24.960368237437269, 60.187718195441121 ], [ 24.960567699118876, 60.188251282879285 ], [ 24.958365876161501, 60.188353589031777 ], [ 24.956170214432642, 60.188356562787504 ], [ 24.953347188239086, 60.18831785847734 ], [ 24.952364618818944, 60.188361572854717 ], [ 24.949465510850448, 60.189269577772137 ], [ 24.949400081945861, 60.18974381844636 ], [ 24.949348856849856, 60.190294065358046 ], [ 24.949605413771828, 60.190469474461722 ], [ 24.952777989775726, 60.189488964582601 ], [ 24.955889269738297, 60.189309835261064 ], [ 24.962273683216026, 60.189336628395701 ], [ 24.962220239147378, 60.18910866167937 ], [ 24.960575612171841, 60.188250501854618 ] ] ] } },
+{ "type": "Feature", "properties": { "fid": 3, "Route": "Linjat", "length": 3.1511458193824389 }, "geometry": { "type": "MultiLineString", "coordinates": [ [ [ 24.949723492013483, 60.181079667213737 ], [ 24.940560144671625, 60.18460403170959 ], [ 24.94174171181248, 60.185329169921175 ], [ 24.950816534592462, 60.181803354535774 ], [ 24.951981630165232, 60.182557594955796 ], [ 24.94629954544618, 60.184781436874665 ], [ 24.945786263501763, 60.184478989675789 ], [ 24.943877148994741, 60.185222430505149 ], [ 24.940270615012839, 60.182854659210079 ], [ 24.939843258041641, 60.182597697405875 ], [ 24.939661882436489, 60.182425544117358 ], [ 24.939613414480071, 60.182255456861483 ], [ 24.939672926821434, 60.182013424909883 ], [ 24.939969633444818, 60.181760355390814 ], [ 24.940733325335167, 60.181367295463197 ], [ 24.941508542296045, 60.181025946658949 ], [ 24.942138874651999, 60.180873764467854 ], [ 24.9429708726047, 60.180805695296556 ], [ 24.943986555152353, 60.180872992643252 ], [ 24.945404162138967, 60.180894977569203 ], [ 24.946176168496596, 60.180840682911985 ], [ 24.947077327867234, 60.180611688770725 ], [ 24.947456136094608, 60.180462947444113 ], [ 24.94780961584728, 60.180483146222784 ], [ 24.948300205969097, 60.18067480011937 ], [ 24.949723516912915, 60.181080008651548 ] ] ] } },
+{ "type": "Feature", "properties": { "fid": 4, "Route": "Torkkeli", "length": 2.9566709060706717 }, "geometry": { "type": "MultiLineString", "coordinates": [ [ [ 24.960376288668598, 60.187726874538377 ], [ 24.958730639188129, 60.187548082153135 ], [ 24.958875902367225, 60.187214527190946 ], [ 24.958575950028248, 60.186996027494118 ], [ 24.958140689010893, 60.186950824556078 ], [ 24.957900676375679, 60.186942849333178 ], [ 24.957707505573332, 60.18701045355381 ], [ 24.957213626382277, 60.186647266683885 ], [ 24.956811183170242, 60.186367831345095 ], [ 24.956639732256377, 60.18643149120917 ], [ 24.955576990621697, 60.18639371511965 ], [ 24.955681861220125, 60.185950461225161 ], [ 24.956002589206673, 60.185972518151779 ], [ 24.956362198279766, 60.185990896191896 ], [ 24.957072406044027, 60.185758021132806 ], [ 24.956447078529415, 60.18531634265608 ], [ 24.955486394811327, 60.18453583468073 ], [ 24.954630063511228, 60.184770723802714 ], [ 24.953948528437301, 60.184956974649957 ], [ 24.953873029717407, 60.185705387670836 ], [ 24.953354572855496, 60.185621667623451 ], [ 24.953091878943347, 60.185499831613853 ], [ 24.951504467971162, 60.185492132379821 ], [ 24.951369396507889, 60.186575297713816 ], [ 24.947373812628388, 60.186446177995599 ], [ 24.943482150861602, 60.186276485787396 ], [ 24.943808480515969, 60.185650586121746 ], [ 24.946859928547369, 60.185748367013289 ], [ 24.946944151300787, 60.185211250754413 ], [ 24.949728172883599, 60.185262759109236 ], [ 24.949878698797072, 60.184474282505754 ], [ 24.95055623620248, 60.184173486779414 ], [ 24.95536211151623, 60.184306603223163 ], [ 24.957246357827078, 60.184293593767435 ], [ 24.958185216272224, 60.184543619035729 ], [ 24.958837808703901, 60.184915421117374 ], [ 24.959225965450951, 60.185329418836766 ], [ 24.959313838087127, 60.185818713835083 ], [ 24.959282352496128, 60.186053787271938 ], [ 24.959280094694197, 60.186226214764915 ], [ 24.960261186019046, 60.187566330988851 ], [ 24.960376910294993, 60.187727036756463 ] ] ] } }
+]
+}
+;
+
+const OVERLAY_COLORS = ['#e63946', '#2a9d8f', '#f4a261', '#6a4c93'];
+
+const OVERLAY_STYLE = {
+    weight:  2.5,
+    opacity: 0.9
+};
+
+// ═══════════════════════════════════════════════
+// IndexedDB
+// ═══════════════════════════════════════════════
+const DB_NAME  = 'ppgis_escooter_v1';
+const DB_STORE = 'observations';
+let db;
+
+function openDB() {
+    return new Promise((resolve, reject) => {
+        const req = indexedDB.open(DB_NAME, 1);
+        req.onupgradeneeded = e => {
+            const d = e.target.result;
+            if (!d.objectStoreNames.contains(DB_STORE)) {
+                d.createObjectStore(DB_STORE, { keyPath: 'id', autoIncrement: true });
+            }
+        };
+        req.onsuccess = e => { db = e.target.result; resolve(db); };
+        req.onerror   = e => reject(e.target.error);
+    });
+}
+
+function dbAdd(rec) {
+    return new Promise((resolve, reject) => {
+        const tx  = db.transaction(DB_STORE, 'readwrite');
+        const req = tx.objectStore(DB_STORE).add(rec);
+        req.onsuccess = e => resolve(e.target.result);
+        req.onerror   = e => reject(e.target.error);
+    });
+}
+
+function dbGetAll() {
+    return new Promise((resolve, reject) => {
+        const tx  = db.transaction(DB_STORE, 'readonly');
+        const req = tx.objectStore(DB_STORE).getAll();
+        req.onsuccess = e => resolve(e.target.result);
+        req.onerror   = e => reject(e.target.error);
+    });
+}
+
+function dbDelete(id) {
+    return new Promise((resolve, reject) => {
+        const tx  = db.transaction(DB_STORE, 'readwrite');
+        const req = tx.objectStore(DB_STORE).delete(id);
+        req.onsuccess = () => resolve();
+        req.onerror   = e => reject(e.target.error);
+    });
+}
+
+function dbClear() {
+    return new Promise((resolve, reject) => {
+        const tx  = db.transaction(DB_STORE, 'readwrite');
+        const req = tx.objectStore(DB_STORE).clear();
+        req.onsuccess = () => resolve();
+        req.onerror   = e => reject(e.target.error);
+    });
+}
+
+// ═══════════════════════════════════════════════
+// Map
+// ═══════════════════════════════════════════════
+const KALLIO = [60.1842, 24.9508];
+
+const map = L.map('map', { zoomControl: false }).setView(KALLIO, 15);
+
+// iOS Safari sometimes paints the container after Leaflet init — force a recalculate
+setTimeout(() => map.invalidateSize(), 200);
+
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    maxZoom: 19
+}).addTo(map);
+
+L.control.zoom({ position: 'topright' }).addTo(map);
+
+function makeMarkerIcon(color) {
+    return L.divIcon({
+        className: '',
+        html: `<svg width="30" height="40" viewBox="0 0 30 40" xmlns="http://www.w3.org/2000/svg">
+            <path d="M15 0C6.72 0 0 6.72 0 15c0 11.25 15 25 15 25S30 26.25 30 15C30 6.72 23.28 0 15 0z"
+                  fill="${color}" stroke="rgba(0,0,0,0.3)" stroke-width="1"/>
+            <text x="15" y="19" text-anchor="middle" fill="white" font-size="13"
+                  font-family="sans-serif" dominant-baseline="middle">🛴</text>
+        </svg>`,
+        iconSize:    [30, 40],
+        iconAnchor:  [15, 40],
+        popupAnchor: [0, -42]
+    });
+}
+
+const ICON_PLACED = makeMarkerIcon('#888');
+const ICON_SAVED  = makeMarkerIcon('#1a73e8');
+
+const markerIndex = {}; // id → L.marker
+let tempMarker    = null;
+let pendingLatLng = null;
+let addMode       = false;
+let currentPhoto  = null; // { file, name }
+
+// Map click handler
+map.on('click', e => {
+    if (!addMode) return;
+    pendingLatLng = e.latlng;
+    if (tempMarker) map.removeLayer(tempMarker);
+    tempMarker = L.marker(e.latlng, { icon: ICON_PLACED }).addTo(map);
+    openSheet(e.latlng);
+});
+
+// ═══════════════════════════════════════════════
+// Add mode toggle
+// ═══════════════════════════════════════════════
+function toggleAddMode() {
+    addMode = !addMode;
+    const btn  = document.getElementById('add-btn');
+    const hint = document.getElementById('tap-hint');
+    const icon = document.getElementById('add-icon');
+
+    if (addMode) {
+        btn.classList.add('active');
+        icon.innerHTML = '<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>';
+        hint.style.display = 'block';
+    } else {
+        btn.classList.remove('active');
+        icon.innerHTML = '<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>';
+        hint.style.display = 'none';
+    }
+}
+
+// ═══════════════════════════════════════════════
+// Bottom sheet
+// ═══════════════════════════════════════════════
+function openSheet(latlng) {
+    // Timestamp
+    document.getElementById('f-time').value = new Date().toLocaleString('en-GB', {
+        day: '2-digit', month: '2-digit', year: 'numeric',
+        hour: '2-digit', minute: '2-digit', second: '2-digit'
+    });
+
+    // Coords label
+    document.getElementById('sheet-coords').textContent =
+        `${latlng.lat.toFixed(6)}, ${latlng.lng.toFixed(6)}`;
+
+    // Restore last observer name
+    const savedName = localStorage.getItem('lastObserver') || '';
+    const obsField  = document.getElementById('f-observer');
+    if (savedName && !obsField.value) obsField.value = savedName;
+
+    const overlay = document.getElementById('sheet-overlay');
+    const sheet   = document.getElementById('bottom-sheet');
+    overlay.classList.add('visible');
+    requestAnimationFrame(() => {
+        overlay.classList.add('open');
+        sheet.classList.add('open');
+    });
+}
+
+function closeSheet(cancel) {
+    const overlay = document.getElementById('sheet-overlay');
+    const sheet   = document.getElementById('bottom-sheet');
+    overlay.classList.remove('open');
+    sheet.classList.remove('open');
+
+    setTimeout(() => {
+        overlay.classList.remove('visible');
+        if (cancel && tempMarker) { map.removeLayer(tempMarker); tempMarker = null; }
+        if (addMode) toggleAddMode();
+    }, 300);
+}
+
+function handleOverlayClick(e) {
+    if (e.target === document.getElementById('sheet-overlay')) closeSheet(true);
+}
+
+function resetForm() {
+    document.getElementById('f-total').value = '';
+    ['f-obstructing','f-notblocking','f-partial','f-bikerack','f-roadway']
+        .forEach(id => { document.getElementById(id).value = '0'; });
+    document.getElementById('f-weather').value = '';
+    document.getElementById('sum-warning').style.display = 'none';
+    removePhoto();
+}
+
+// ═══════════════════════════════════════════════
+// Steppers
+// ═══════════════════════════════════════════════
+function step(id, delta) {
+    const el  = document.getElementById(id);
+    const val = parseInt(el.value) || 0;
+    el.value  = Math.max(0, val + delta);
+    validateSum();
+}
+
+// ═══════════════════════════════════════════════
+// Sum validation
+// ═══════════════════════════════════════════════
+function validateSum() {
+    const total = parseInt(document.getElementById('f-total').value) || 0;
+    const sum   = ['f-obstructing','f-notblocking','f-partial','f-bikerack','f-roadway']
+        .reduce((s, id) => s + (parseInt(document.getElementById(id).value) || 0), 0);
+    const warn  = document.getElementById('sum-warning');
+
+    if (sum > total && total > 0) {
+        document.getElementById('sum-val').textContent   = sum;
+        document.getElementById('total-val').textContent = total;
+        warn.style.display = 'block';
+    } else {
+        warn.style.display = 'none';
+    }
+}
+
+// ═══════════════════════════════════════════════
+// Photo
+// ═══════════════════════════════════════════════
+function previewPhoto(input) {
+    if (!input.files || !input.files[0]) return;
+    const file = input.files[0];
+    const ext  = file.name.split('.').pop() || 'jpg';
+    currentPhoto = { file, name: `photo_${Date.now()}.${ext}` };
+
+    const reader = new FileReader();
+    reader.onload = e => {
+        document.getElementById('photo-img').src       = e.target.result;
+        document.getElementById('photo-preview').style.display = 'block';
+    };
+    reader.readAsDataURL(file);
+}
+
+function removePhoto() {
+    currentPhoto = null;
+    document.getElementById('f-photo').value          = '';
+    document.getElementById('photo-preview').style.display = 'none';
+    document.getElementById('photo-img').src          = '';
+}
+
+// ═══════════════════════════════════════════════
+// Save point
+// ═══════════════════════════════════════════════
+async function savePoint() {
+    const totalRaw  = document.getElementById('f-total').value.trim();
+    const observer  = document.getElementById('f-observer').value.trim();
+    const timeDisp  = document.getElementById('f-time').value;
+
+    if (!totalRaw)  { showToast('⚠️ Total e-scooters is required'); return; }
+    if (!observer)  { showToast('⚠️ Observer name is required');    return; }
+
+    const btn = document.getElementById('save-btn');
+    btn.disabled    = true;
+    btn.textContent = 'Saving…';
+
+    const rec = {
+        lat:         pendingLatLng.lat,
+        lng:         pendingLatLng.lng,
+        total:       parseInt(totalRaw),
+        obstructing: parseInt(document.getElementById('f-obstructing').value) || 0,
+        notblocking: parseInt(document.getElementById('f-notblocking').value) || 0,
+        partial:     parseInt(document.getElementById('f-partial').value)     || 0,
+        bikerack:    parseInt(document.getElementById('f-bikerack').value)    || 0,
+        roadway:     parseInt(document.getElementById('f-roadway').value)     || 0,
+        timestamp:   new Date().toISOString(),
+        timeDisplay: timeDisp,
+        weather:     document.getElementById('f-weather').value || '',
+        observer:    observer,
+        photoName:   currentPhoto ? currentPhoto.name : null,
+        photoBlob:   currentPhoto ? currentPhoto.file : null
+    };
+
+    try {
+        const id = await dbAdd(rec);
+        rec.id   = id;
+
+        localStorage.setItem('lastObserver', observer);
+        placeMarker(rec);
+        refreshCount();
+        closeSheet(false);
+        if (tempMarker) { map.removeLayer(tempMarker); tempMarker = null; }
+        resetForm();
+        showToast('✅ Point saved!');
+    } catch (err) {
+        console.error(err);
+        showToast('❌ Error saving — please try again');
+    }
+
+    btn.disabled    = false;
+    btn.textContent = '💾 Save Observation';
+}
+
+// ═══════════════════════════════════════════════
+// Markers
+// ═══════════════════════════════════════════════
+function buildPopupHTML(o) {
+    let html = `<div class="popup-title">🛴 ${o.total} e-scooter${o.total !== 1 ? 's' : ''}</div>
+        <div><b>Observer:</b> ${escHtml(o.observer)}</div>
+        <div><b>Time:</b> ${escHtml(o.timeDisplay)}</div>`;
+    if (o.weather)     html += `<div><b>Weather:</b> ${escHtml(o.weather)}</div>`;
+    if (o.obstructing) html += `<div>Obstructing path: ${o.obstructing}</div>`;
+    if (o.notblocking) html += `<div>Outside, not blocking: ${o.notblocking}</div>`;
+    if (o.partial)     html += `<div>Partially outside: ${o.partial}</div>`;
+    if (o.bikerack)    html += `<div>Bike rack: ${o.bikerack}</div>`;
+    if (o.roadway)     html += `<div>In roadway: ${o.roadway}</div>`;
+    html += `<div style="font-size:11px;color:#999;margin-top:5px">${o.lat.toFixed(6)}, ${o.lng.toFixed(6)}</div>`;
+    return html;
+}
+
+function placeMarker(o) {
+    const m = L.marker([o.lat, o.lng], { icon: ICON_SAVED }).addTo(map);
+    m.bindPopup(buildPopupHTML(o));
+    markerIndex[o.id] = m;
+}
+
+async function loadAll() {
+    const all = await dbGetAll();
+    all.forEach(placeMarker);
+    refreshCount(all.length);
+}
+
+async function refreshCount(n) {
+    if (n === undefined) n = (await dbGetAll()).length;
+    document.getElementById('point-count').textContent =
+        `${n} point${n !== 1 ? 's' : ''}`;
+}
+
+// ═══════════════════════════════════════════════
+// Panels
+// ═══════════════════════════════════════════════
+function openPanel(name) {
+    if (name === 'points') {
+        document.getElementById('points-panel').classList.add('open');
+        renderList();
+    } else {
+        document.getElementById('export-panel').classList.add('open');
+        updateExportInfo();
+    }
+}
+
+function closePanel() {
+    document.getElementById('points-panel').classList.remove('open');
+    document.getElementById('export-panel').classList.remove('open');
+}
+
+// ═══════════════════════════════════════════════
+// Points list
+// ═══════════════════════════════════════════════
+async function renderList() {
+    const all  = await dbGetAll();
+    const list = document.getElementById('points-list');
+
+    if (all.length === 0) {
+        list.innerHTML = `<div class="empty-state">
+            <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/>
+            </svg>
+            <p>No points recorded yet.<br>Tap <strong>+</strong> on the map to start.</p>
+        </div>`;
+        return;
+    }
+
+    // Sort newest first
+    const sorted = [...all].reverse();
+
+    list.innerHTML = sorted.map(o => {
+        const details = [
+            o.obstructing ? `Obstructing: ${o.obstructing}` : null,
+            o.notblocking ? `Not blocking: ${o.notblocking}` : null,
+            o.partial     ? `Partial: ${o.partial}`          : null,
+            o.bikerack    ? `Bike rack: ${o.bikerack}`       : null,
+            o.roadway     ? `Roadway: ${o.roadway}`          : null
+        ].filter(Boolean).join(' · ');
+
+        const thumbTag = o.photoBlob
+            ? `<img class="pc-thumb" src="${URL.createObjectURL(o.photoBlob)}" alt="">`
+            : '';
+
+        return `<div class="point-card">
+            ${thumbTag}
+            <div class="pc-header">
+                <div>
+                    <div class="pc-title">🛴 ${o.total} e-scooter${o.total !== 1 ? 's' : ''}</div>
+                    <div class="pc-sub">${escHtml(o.timeDisplay)} · ${escHtml(o.observer)}</div>
+                </div>
+                <button class="delete-btn" onclick="deletePoint(${o.id})">Delete</button>
+            </div>
+            <div class="pc-detail">
+                <b>Coords:</b> ${o.lat.toFixed(6)}, ${o.lng.toFixed(6)}<br>
+                ${o.weather ? `<b>Weather:</b> ${escHtml(o.weather)}<br>` : ''}
+                ${details || 'No incorrect parking recorded'}
+            </div>
+        </div>`;
+    }).join('');
+}
+
+async function deletePoint(id) {
+    if (!confirm('Delete this observation? This cannot be undone.')) return;
+    await dbDelete(id);
+    if (markerIndex[id]) { map.removeLayer(markerIndex[id]); delete markerIndex[id]; }
+    renderList();
+    refreshCount();
+    showToast('🗑️ Point deleted');
+}
+
+// ═══════════════════════════════════════════════
+// Export
+// ═══════════════════════════════════════════════
+async function updateExportInfo() {
+    const all    = await dbGetAll();
+    const photos = all.filter(o => o.photoBlob).length;
+    document.getElementById('export-info').innerHTML =
+        `<strong>${all.length} observation${all.length !== 1 ? 's' : ''}</strong> recorded on this device<br>
+         <strong>${photos} photo${photos !== 1 ? 's' : ''}</strong> attached<br><br>
+         ZIP will contain:<br>
+         📄 <code>observations.csv</code> — all data with lon/lat coordinates<br>
+         📷 <code>photos/</code> — all uploaded photographs`;
+}
+
+async function exportData() {
+    const all = await dbGetAll();
+    if (!all.length) { showToast('No data to export yet'); return; }
+
+    showToast('⏳ Preparing export…');
+
+    const zip    = new JSZip();
+    const photos = zip.folder('photos');
+
+    const headers = [
+        'id', 'longitude', 'latitude',
+        'total_escooters', 'outside_obstructing', 'outside_not_blocking',
+        'partially_outside', 'bike_rack', 'roadway',
+        'timestamp_iso', 'time_display', 'weather', 'observer', 'photo_filename'
+    ];
+
+    const csvRows = all.map(o => [
+        o.id,
+        o.lng.toFixed(7),
+        o.lat.toFixed(7),
+        o.total,
+        o.obstructing,
+        o.notblocking,
+        o.partial,
+        o.bikerack,
+        o.roadway,
+        o.timestamp,
+        csvCell(o.timeDisplay),
+        o.weather   || '',
+        csvCell(o.observer),
+        o.photoName || ''
+    ]);
+
+    const csv = [headers.join(','), ...csvRows.map(r => r.join(','))].join('\r\n');
+    zip.file('observations.csv', csv);
+
+    for (const o of all) {
+        if (o.photoBlob && o.photoName) {
+            photos.file(o.photoName, o.photoBlob);
+        }
+    }
+
+    const blob = await zip.generateAsync({ type: 'blob' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = `escooter_survey_${new Date().toISOString().slice(0, 10)}.zip`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    showToast('✅ Export downloaded!');
+}
+
+async function confirmClear() {
+    const all = await dbGetAll();
+    if (!all.length) { showToast('No data to clear'); return; }
+    if (!confirm(
+        `⚠️ Permanently delete all ${all.length} observation(s) and photos from this device?\n\nThis cannot be undone. Export your data first if needed.`
+    )) return;
+
+    await dbClear();
+    Object.values(markerIndex).forEach(m => map.removeLayer(m));
+    Object.keys(markerIndex).forEach(k => delete markerIndex[k]);
+    refreshCount(0);
+    closePanel();
+    showToast('🗑️ All data cleared');
+}
+
+// ═══════════════════════════════════════════════
+// GPS live location
+// ═══════════════════════════════════════════════
+let gpsMarker   = null;
+let gpsAccCircle = null;
+let lastKnownPos = null;
+
+function startGPS() {
+    if (!navigator.geolocation) {
+        showToast('GPS not available on this device');
+        return;
+    }
+
+    navigator.geolocation.watchPosition(
+        pos => {
+            lastKnownPos = [pos.coords.latitude, pos.coords.longitude];
+            const acc    = pos.coords.accuracy;
+
+            if (!gpsMarker) {
+                // Blue dot — L.circleMarker is built-in and needs no custom CSS
+                gpsMarker = L.circleMarker(lastKnownPos, {
+                    radius:      8,
+                    fillColor:   '#1a73e8',
+                    fillOpacity: 1,
+                    color:       'white',
+                    weight:      3,
+                    interactive: false,
+                    pane:        'shadowPane'
+                }).addTo(map);
+
+                // Accuracy ring
+                gpsAccCircle = L.circle(lastKnownPos, {
+                    radius:      acc,
+                    fillColor:   '#1a73e8',
+                    fillOpacity: 0.08,
+                    color:       '#1a73e8',
+                    weight:      1,
+                    interactive: false
+                }).addTo(map);
+            } else {
+                gpsMarker.setLatLng(lastKnownPos);
+                gpsAccCircle.setLatLng(lastKnownPos).setRadius(acc);
+            }
+        },
+        err => {
+            console.warn('GPS error:', err.code, err.message);
+            if (err.code === 1) showToast('⚠️ Location permission denied — enable in browser settings', 5000);
+        },
+        { enableHighAccuracy: true, maximumAge: 5000, timeout: 20000 }
+    );
+}
+
+function locateMe() {
+    if (lastKnownPos) {
+        map.setView(lastKnownPos, 17, { animate: true });
+        return;
+    }
+    showToast('⏳ Getting location…');
+    navigator.geolocation.getCurrentPosition(
+        pos => {
+            const ll = [pos.coords.latitude, pos.coords.longitude];
+            map.setView(ll, 17, { animate: true });
+        },
+        err => {
+            if (err.code === 1) showToast('⚠️ Location permission denied', 4000);
+            else showToast('⚠️ Could not get location');
+        },
+        { enableHighAccuracy: true, timeout: 15000 }
+    );
+}
+
+// ═══════════════════════════════════════════════
+// Toast
+// ═══════════════════════════════════════════════
+let toastTimer;
+function showToast(msg, ms = 2800) {
+    const t       = document.getElementById('toast');
+    t.textContent = msg;
+    t.style.display = 'block';
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { t.style.display = 'none'; }, ms);
+}
+
+// ═══════════════════════════════════════════════
+// Helpers
+// ═══════════════════════════════════════════════
+function csvCell(v) {
+    if (v == null) return '';
+    const s = String(v);
+    return s.includes(',') || s.includes('"') || s.includes('\n')
+        ? `"${s.replace(/"/g, '""')}"` : s;
+}
+
+function escHtml(s) {
+    if (!s) return '';
+    return String(s)
+        .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+        .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ═══════════════════════════════════════════════
+// Persistent storage + init
+// ═══════════════════════════════════════════════
+async function requestPersist() {
+    if (navigator.storage && navigator.storage.persist) {
+        const granted = await navigator.storage.persist();
+        if (!granted) {
+            showToast('⚠️ Persistent storage not granted — do not clear browser data', 5000);
+        }
+    }
+}
+
+function loadPolygonOverlay() {
+    if (!POLYGON_GEOJSON) return;
+    try {
+        L.geoJSON(POLYGON_GEOJSON, {
+            style: {
+                color: '#000000',
+                fillColor: '#90ee90',
+                fillOpacity: 0.3,
+                weight: 1,
+                opacity: 0.3
+            }
+        }).addTo(map);
+    } catch (e) {
+        console.error('Polygon overlay error:', e);
+    }
+}
+
+function loadOverlay() {
+    if (!OVERLAY_GEOJSON) return;
+    try {
+        const layer = L.geoJSON(OVERLAY_GEOJSON, {
+            style: (feature) => ({
+                ...OVERLAY_STYLE,
+                color: OVERLAY_COLORS[(feature.properties.fid - 1) % OVERLAY_COLORS.length]
+            })
+        }).addTo(map);
+        map.fitBounds(layer.getBounds(), { padding: [40, 40] });
+        const count = OVERLAY_GEOJSON.features ? OVERLAY_GEOJSON.features.length : '?';
+        showToast(`🗺️ Overlay loaded (${count} features)`);
+    } catch (e) {
+        console.error('Overlay error:', e);
+        showToast('❌ Failed to load overlay GeoJSON');
+    }
+}
+
+// Load polygon underlay first, then line overlay on top
+loadPolygonOverlay();
+loadOverlay();
+
+async function init() {
+    await openDB();
+    await requestPersist();
+    await loadAll();
+    startGPS();
+}
+
+init();
+</script>
+</body>
+</html>
