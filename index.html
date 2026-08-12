@@ -335,6 +335,23 @@
             margin-top: 0;
         }
 
+        /* light shading for category groups — each a distinct light tint */
+        .subgroup-shaded {
+            border-radius: 12px;
+            padding: 14px 12px 2px;
+            margin-bottom: 6px;
+        }
+        .shade-partial { background: #eef3fc; }
+        .shade-close   { background: #eef8f3; }
+        .shade-outside { background: #fdf3ec; }
+        .shade-other   { background: #f5f0fa; }
+
+        /* colour-coded label text */
+        .txt-impede   { color: #c62828; font-weight: 600; }
+        .txt-noimpede { color: #2e7d32; font-weight: 600; }
+        .txt-upright  { color: #1565c0; font-weight: 600; }
+        .txt-lying    { color: #8e24aa; font-weight: 600; }
+
         /* checkbox rows */
         .checkbox-group {
             display: flex;
@@ -658,7 +675,7 @@
                 <div class="subgroup-title no-border">Parked in square</div>
 
                 <div class="form-group">
-                    <label for="f-sq-upright">Parked in square — upright</label>
+                    <label for="f-sq-upright">Parked in square — <span class="txt-upright">upright</span></label>
                     <div class="num-row">
                         <input type="number" id="f-sq-upright" min="0" value="0" inputmode="numeric">
                         <div class="steppers">
@@ -669,7 +686,7 @@
                 </div>
 
                 <div class="form-group">
-                    <label for="f-sq-lying">Parked in square — lying down</label>
+                    <label for="f-sq-lying">Parked in square — <span class="txt-lying">lying down</span></label>
                     <div class="num-row">
                         <input type="number" id="f-sq-lying" min="0" value="0" inputmode="numeric">
                         <div class="steppers">
@@ -681,8 +698,10 @@
 
                 <div class="subgroup-title">Parked partially in square</div>
 
+                <div class="subgroup-shaded shade-partial">
+
                 <div class="form-group">
-                    <label for="f-partial-impede-upright">Parked partially in square — impeding road users — upright</label>
+                    <label for="f-partial-impede-upright">Parked partially in square — <span class="txt-impede">impeding road users</span> — <span class="txt-upright">upright</span></label>
                     <div class="num-row">
                         <input type="number" id="f-partial-impede-upright" min="0" value="0" inputmode="numeric">
                         <div class="steppers">
@@ -693,7 +712,7 @@
                 </div>
 
                 <div class="form-group">
-                    <label for="f-partial-impede-lying">Parked partially in square — impeding road users — lying down</label>
+                    <label for="f-partial-impede-lying">Parked partially in square — <span class="txt-impede">impeding road users</span> — <span class="txt-lying">lying down</span></label>
                     <div class="num-row">
                         <input type="number" id="f-partial-impede-lying" min="0" value="0" inputmode="numeric">
                         <div class="steppers">
@@ -704,7 +723,7 @@
                 </div>
 
                 <div class="form-group">
-                    <label for="f-partial-noimpede-upright">Parked partially in square — not impeding road users — upright</label>
+                    <label for="f-partial-noimpede-upright">Parked partially in square — <span class="txt-noimpede">not impeding road users</span> — <span class="txt-upright">upright</span></label>
                     <div class="num-row">
                         <input type="number" id="f-partial-noimpede-upright" min="0" value="0" inputmode="numeric">
                         <div class="steppers">
@@ -715,7 +734,7 @@
                 </div>
 
                 <div class="form-group">
-                    <label for="f-partial-noimpede-lying">Parked partially in square — not impeding road users — lying down</label>
+                    <label for="f-partial-noimpede-lying">Parked partially in square — <span class="txt-noimpede">not impeding road users</span> — <span class="txt-lying">lying down</span></label>
                     <div class="num-row">
                         <input type="number" id="f-partial-noimpede-lying" min="0" value="0" inputmode="numeric">
                         <div class="steppers">
@@ -725,10 +744,14 @@
                     </div>
                 </div>
 
+                </div>
+
                 <div class="subgroup-title">Parked close to square</div>
 
+                <div class="subgroup-shaded shade-close">
+
                 <div class="form-group">
-                    <label for="f-close-impede-upright">Parked close to square — impeding other road users — upright</label>
+                    <label for="f-close-impede-upright">Parked close to square — <span class="txt-impede">impeding other road users</span> — <span class="txt-upright">upright</span></label>
                     <div class="num-row">
                         <input type="number" id="f-close-impede-upright" min="0" value="0" inputmode="numeric">
                         <div class="steppers">
@@ -739,7 +762,7 @@
                 </div>
 
                 <div class="form-group">
-                    <label for="f-close-impede-lying">Parked close to square — impeding other road users — lying down</label>
+                    <label for="f-close-impede-lying">Parked close to square — <span class="txt-impede">impeding other road users</span> — <span class="txt-lying">lying down</span></label>
                     <div class="num-row">
                         <input type="number" id="f-close-impede-lying" min="0" value="0" inputmode="numeric">
                         <div class="steppers">
@@ -750,7 +773,7 @@
                 </div>
 
                 <div class="form-group">
-                    <label for="f-close-noimpede-upright">Parked close to square — not impeding other road users — upright</label>
+                    <label for="f-close-noimpede-upright">Parked close to square — <span class="txt-noimpede">not impeding other road users</span> — <span class="txt-upright">upright</span></label>
                     <div class="num-row">
                         <input type="number" id="f-close-noimpede-upright" min="0" value="0" inputmode="numeric">
                         <div class="steppers">
@@ -761,7 +784,7 @@
                 </div>
 
                 <div class="form-group">
-                    <label for="f-close-noimpede-lying">Parked close to square — not impeding other road users — lying down</label>
+                    <label for="f-close-noimpede-lying">Parked close to square — <span class="txt-noimpede">not impeding other road users</span> — <span class="txt-lying">lying down</span></label>
                     <div class="num-row">
                         <input type="number" id="f-close-noimpede-lying" min="0" value="0" inputmode="numeric">
                         <div class="steppers">
@@ -771,10 +794,14 @@
                     </div>
                 </div>
 
+                </div>
+
                 <div class="subgroup-title">Parked outside square</div>
 
+                <div class="subgroup-shaded shade-outside">
+
                 <div class="form-group">
-                    <label for="f-out-impede-upright">Parked outside square — impeding road users — upright</label>
+                    <label for="f-out-impede-upright">Parked outside square — <span class="txt-impede">impeding road users</span> — <span class="txt-upright">upright</span></label>
                     <div class="num-row">
                         <input type="number" id="f-out-impede-upright" min="0" value="0" inputmode="numeric">
                         <div class="steppers">
@@ -785,7 +812,7 @@
                 </div>
 
                 <div class="form-group">
-                    <label for="f-out-impede-lying">Parked outside square — impeding road users — lying down</label>
+                    <label for="f-out-impede-lying">Parked outside square — <span class="txt-impede">impeding road users</span> — <span class="txt-lying">lying down</span></label>
                     <div class="num-row">
                         <input type="number" id="f-out-impede-lying" min="0" value="0" inputmode="numeric">
                         <div class="steppers">
@@ -796,7 +823,7 @@
                 </div>
 
                 <div class="form-group">
-                    <label for="f-out-noimpede-upright">Parked outside square — not impeding road users — upright</label>
+                    <label for="f-out-noimpede-upright">Parked outside square — <span class="txt-noimpede">not impeding road users</span> — <span class="txt-upright">upright</span></label>
                     <div class="num-row">
                         <input type="number" id="f-out-noimpede-upright" min="0" value="0" inputmode="numeric">
                         <div class="steppers">
@@ -807,7 +834,7 @@
                 </div>
 
                 <div class="form-group">
-                    <label for="f-out-noimpede-lying">Parked outside square — not impeding road users — lying down</label>
+                    <label for="f-out-noimpede-lying">Parked outside square — <span class="txt-noimpede">not impeding road users</span> — <span class="txt-lying">lying down</span></label>
                     <div class="num-row">
                         <input type="number" id="f-out-noimpede-lying" min="0" value="0" inputmode="numeric">
                         <div class="steppers">
@@ -817,61 +844,188 @@
                     </div>
                 </div>
 
+                </div>
+
                 <div class="subgroup-title">Other locations</div>
 
+                <div class="subgroup-shaded shade-other">
+
                 <div class="form-group">
-                    <label for="f-bikerack">Parked in bike rack</label>
+                    <label for="f-bikerack-upright">Parked in bike rack — <span class="txt-upright">upright</span></label>
                     <div class="num-row">
-                        <input type="number" id="f-bikerack" min="0" value="0" inputmode="numeric">
+                        <input type="number" id="f-bikerack-upright" min="0" value="0" inputmode="numeric">
                         <div class="steppers">
-                            <button class="step-btn" onclick="step('f-bikerack',-1)">−</button>
-                            <button class="step-btn" onclick="step('f-bikerack', 1)">+</button>
+                            <button class="step-btn" onclick="step('f-bikerack-upright',-1)">−</button>
+                            <button class="step-btn" onclick="step('f-bikerack-upright', 1)">+</button>
                         </div>
                     </div>
                 </div>
 
                 <div class="form-group">
-                    <label for="f-carspace">Parked in a car parking space</label>
+                    <label for="f-bikerack-lying">Parked in bike rack — <span class="txt-lying">lying down</span></label>
                     <div class="num-row">
-                        <input type="number" id="f-carspace" min="0" value="0" inputmode="numeric">
+                        <input type="number" id="f-bikerack-lying" min="0" value="0" inputmode="numeric">
                         <div class="steppers">
-                            <button class="step-btn" onclick="step('f-carspace',-1)">−</button>
-                            <button class="step-btn" onclick="step('f-carspace', 1)">+</button>
+                            <button class="step-btn" onclick="step('f-bikerack-lying',-1)">−</button>
+                            <button class="step-btn" onclick="step('f-bikerack-lying', 1)">+</button>
                         </div>
                     </div>
                 </div>
 
                 <div class="form-group">
-                    <label for="f-disabled-space">Parking in a disabled car parking space</label>
+                    <label for="f-carspace-upright">Parked in a car parking space — <span class="txt-upright">upright</span></label>
                     <div class="num-row">
-                        <input type="number" id="f-disabled-space" min="0" value="0" inputmode="numeric">
+                        <input type="number" id="f-carspace-upright" min="0" value="0" inputmode="numeric">
                         <div class="steppers">
-                            <button class="step-btn" onclick="step('f-disabled-space',-1)">−</button>
-                            <button class="step-btn" onclick="step('f-disabled-space', 1)">+</button>
+                            <button class="step-btn" onclick="step('f-carspace-upright',-1)">−</button>
+                            <button class="step-btn" onclick="step('f-carspace-upright', 1)">+</button>
                         </div>
                     </div>
                 </div>
 
                 <div class="form-group">
-                    <label for="f-obstruct-door">Parked obstructing a door</label>
+                    <label for="f-carspace-lying">Parked in a car parking space — <span class="txt-lying">lying down</span></label>
                     <div class="num-row">
-                        <input type="number" id="f-obstruct-door" min="0" value="0" inputmode="numeric">
+                        <input type="number" id="f-carspace-lying" min="0" value="0" inputmode="numeric">
                         <div class="steppers">
-                            <button class="step-btn" onclick="step('f-obstruct-door',-1)">−</button>
-                            <button class="step-btn" onclick="step('f-obstruct-door', 1)">+</button>
+                            <button class="step-btn" onclick="step('f-carspace-lying',-1)">−</button>
+                            <button class="step-btn" onclick="step('f-carspace-lying', 1)">+</button>
                         </div>
                     </div>
                 </div>
 
                 <div class="form-group">
-                    <label for="f-obstruct-crossing">Parked obstructing a zebra crossing or similar</label>
+                    <label for="f-disabled-space-upright">Parking in a disabled car parking space — <span class="txt-upright">upright</span></label>
                     <div class="num-row">
-                        <input type="number" id="f-obstruct-crossing" min="0" value="0" inputmode="numeric">
+                        <input type="number" id="f-disabled-space-upright" min="0" value="0" inputmode="numeric">
                         <div class="steppers">
-                            <button class="step-btn" onclick="step('f-obstruct-crossing',-1)">−</button>
-                            <button class="step-btn" onclick="step('f-obstruct-crossing', 1)">+</button>
+                            <button class="step-btn" onclick="step('f-disabled-space-upright',-1)">−</button>
+                            <button class="step-btn" onclick="step('f-disabled-space-upright', 1)">+</button>
                         </div>
                     </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="f-disabled-space-lying">Parking in a disabled car parking space — <span class="txt-lying">lying down</span></label>
+                    <div class="num-row">
+                        <input type="number" id="f-disabled-space-lying" min="0" value="0" inputmode="numeric">
+                        <div class="steppers">
+                            <button class="step-btn" onclick="step('f-disabled-space-lying',-1)">−</button>
+                            <button class="step-btn" onclick="step('f-disabled-space-lying', 1)">+</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="f-obstruct-door-upright">Parked obstructing a door — <span class="txt-upright">upright</span></label>
+                    <div class="num-row">
+                        <input type="number" id="f-obstruct-door-upright" min="0" value="0" inputmode="numeric">
+                        <div class="steppers">
+                            <button class="step-btn" onclick="step('f-obstruct-door-upright',-1)">−</button>
+                            <button class="step-btn" onclick="step('f-obstruct-door-upright', 1)">+</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="f-obstruct-door-lying">Parked obstructing a door — <span class="txt-lying">lying down</span></label>
+                    <div class="num-row">
+                        <input type="number" id="f-obstruct-door-lying" min="0" value="0" inputmode="numeric">
+                        <div class="steppers">
+                            <button class="step-btn" onclick="step('f-obstruct-door-lying',-1)">−</button>
+                            <button class="step-btn" onclick="step('f-obstruct-door-lying', 1)">+</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="f-obstruct-crossing-upright">Parked obstructing a zebra crossing or similar — <span class="txt-upright">upright</span></label>
+                    <div class="num-row">
+                        <input type="number" id="f-obstruct-crossing-upright" min="0" value="0" inputmode="numeric">
+                        <div class="steppers">
+                            <button class="step-btn" onclick="step('f-obstruct-crossing-upright',-1)">−</button>
+                            <button class="step-btn" onclick="step('f-obstruct-crossing-upright', 1)">+</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="f-obstruct-crossing-lying">Parked obstructing a zebra crossing or similar — <span class="txt-lying">lying down</span></label>
+                    <div class="num-row">
+                        <input type="number" id="f-obstruct-crossing-lying" min="0" value="0" inputmode="numeric">
+                        <div class="steppers">
+                            <button class="step-btn" onclick="step('f-obstruct-crossing-lying',-1)">−</button>
+                            <button class="step-btn" onclick="step('f-obstruct-crossing-lying', 1)">+</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="f-bus-tram-stop-upright">Parked at a bus or tram stop — <span class="txt-upright">upright</span></label>
+                    <div class="num-row">
+                        <input type="number" id="f-bus-tram-stop-upright" min="0" value="0" inputmode="numeric">
+                        <div class="steppers">
+                            <button class="step-btn" onclick="step('f-bus-tram-stop-upright',-1)">−</button>
+                            <button class="step-btn" onclick="step('f-bus-tram-stop-upright', 1)">+</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="f-bus-tram-stop-lying">Parked at a bus or tram stop — <span class="txt-lying">lying down</span></label>
+                    <div class="num-row">
+                        <input type="number" id="f-bus-tram-stop-lying" min="0" value="0" inputmode="numeric">
+                        <div class="steppers">
+                            <button class="step-btn" onclick="step('f-bus-tram-stop-lying',-1)">−</button>
+                            <button class="step-btn" onclick="step('f-bus-tram-stop-lying', 1)">+</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="f-roadway-upright">Parked on the roadway — <span class="txt-upright">upright</span></label>
+                    <div class="num-row">
+                        <input type="number" id="f-roadway-upright" min="0" value="0" inputmode="numeric">
+                        <div class="steppers">
+                            <button class="step-btn" onclick="step('f-roadway-upright',-1)">−</button>
+                            <button class="step-btn" onclick="step('f-roadway-upright', 1)">+</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="f-roadway-lying">Parked on the roadway — <span class="txt-lying">lying down</span></label>
+                    <div class="num-row">
+                        <input type="number" id="f-roadway-lying" min="0" value="0" inputmode="numeric">
+                        <div class="steppers">
+                            <button class="step-btn" onclick="step('f-roadway-lying',-1)">−</button>
+                            <button class="step-btn" onclick="step('f-roadway-lying', 1)">+</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="f-cycle-lane-upright">Parked on a cycle lane — <span class="txt-upright">upright</span></label>
+                    <div class="num-row">
+                        <input type="number" id="f-cycle-lane-upright" min="0" value="0" inputmode="numeric">
+                        <div class="steppers">
+                            <button class="step-btn" onclick="step('f-cycle-lane-upright',-1)">−</button>
+                            <button class="step-btn" onclick="step('f-cycle-lane-upright', 1)">+</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="f-cycle-lane-lying">Parked on a cycle lane — <span class="txt-lying">lying down</span></label>
+                    <div class="num-row">
+                        <input type="number" id="f-cycle-lane-lying" min="0" value="0" inputmode="numeric">
+                        <div class="steppers">
+                            <button class="step-btn" onclick="step('f-cycle-lane-lying',-1)">−</button>
+                            <button class="step-btn" onclick="step('f-cycle-lane-lying', 1)">+</button>
+                        </div>
+                    </div>
+                </div>
+
                 </div>
             </div>
 
@@ -1028,11 +1182,22 @@ const CATEGORY_FIELDS = [
     { id: 'f-out-impede-lying',        key: 'outImpedeLying',       label: 'Parked outside square - impeding road users - lying down' },
     { id: 'f-out-noimpede-upright',    key: 'outNoImpedeUpright',   label: 'Parked outside square - not impeding road users - upright' },
     { id: 'f-out-noimpede-lying',      key: 'outNoImpedeLying',     label: 'Parked outside square - not impeding road users - lying down' },
-    { id: 'f-bikerack',                key: 'bikerack',             label: 'Parked in bike rack' },
-    { id: 'f-carspace',                key: 'carspace',             label: 'Parked in a car parking space' },
-    { id: 'f-disabled-space',          key: 'disabledSpace',        label: 'Parking in a disabled car parking space' },
-    { id: 'f-obstruct-door',           key: 'obstructDoor',         label: 'Parked obstructing a door' },
-    { id: 'f-obstruct-crossing',       key: 'obstructCrossing',     label: 'Parked obstructing a zebra crossing or similar' }
+    { id: 'f-bikerack-upright',         key: 'bikerackUpright',      label: 'Parked in bike rack - upright' },
+    { id: 'f-bikerack-lying',           key: 'bikerackLying',        label: 'Parked in bike rack - lying down' },
+    { id: 'f-carspace-upright',         key: 'carspaceUpright',      label: 'Parked in a car parking space - upright' },
+    { id: 'f-carspace-lying',           key: 'carspaceLying',        label: 'Parked in a car parking space - lying down' },
+    { id: 'f-disabled-space-upright',   key: 'disabledSpaceUpright', label: 'Parking in a disabled car parking space - upright' },
+    { id: 'f-disabled-space-lying',     key: 'disabledSpaceLying',   label: 'Parking in a disabled car parking space - lying down' },
+    { id: 'f-obstruct-door-upright',    key: 'obstructDoorUpright',  label: 'Parked obstructing a door - upright' },
+    { id: 'f-obstruct-door-lying',      key: 'obstructDoorLying',    label: 'Parked obstructing a door - lying down' },
+    { id: 'f-obstruct-crossing-upright',key: 'obstructCrossingUpright', label: 'Parked obstructing a zebra crossing or similar - upright' },
+    { id: 'f-obstruct-crossing-lying',  key: 'obstructCrossingLying',   label: 'Parked obstructing a zebra crossing or similar - lying down' },
+    { id: 'f-bus-tram-stop-upright',    key: 'busTramStopUpright',   label: 'Parked at a bus or tram stop - upright' },
+    { id: 'f-bus-tram-stop-lying',      key: 'busTramStopLying',     label: 'Parked at a bus or tram stop - lying down' },
+    { id: 'f-roadway-upright',          key: 'roadwayUpright',       label: 'Parked on the roadway - upright' },
+    { id: 'f-roadway-lying',            key: 'roadwayLying',         label: 'Parked on the roadway - lying down' },
+    { id: 'f-cycle-lane-upright',       key: 'cycleLaneUpright',     label: 'Parked on a cycle lane - upright' },
+    { id: 'f-cycle-lane-lying',         key: 'cycleLaneLying',       label: 'Parked on a cycle lane - lying down' }
 ];
 
 const CHECKBOX_FIELDS = [
