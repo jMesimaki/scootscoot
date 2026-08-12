@@ -1535,12 +1535,15 @@ function openSheet(latlng) {
     const obsField  = document.getElementById('f-observer');
     if (savedName && !obsField.value) obsField.value = savedName;
 
-    const overlay = document.getElementById('sheet-overlay');
-    const sheet   = document.getElementById('bottom-sheet');
+    const overlay  = document.getElementById('sheet-overlay');
+    const sheet    = document.getElementById('bottom-sheet');
+    const formBody = document.querySelector('#bottom-sheet .form-body');
     overlay.classList.add('visible');
     requestAnimationFrame(() => {
         overlay.classList.add('open');
         sheet.classList.add('open');
+        if (formBody) formBody.scrollTop = 0;
+        sheet.scrollTop = 0;
     });
 }
 
