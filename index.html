@@ -375,6 +375,48 @@
             cursor: pointer;
         }
 
+        /* route selector chips */
+        .route-chip-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .route-chip {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            padding: 9px 14px;
+            border-radius: 20px;
+            border: 1.5px solid var(--chip-color, #ccc);
+            color: var(--chip-color, #333);
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            background: white;
+            transition: background 0.15s, color 0.15s;
+            user-select: none;
+        }
+        .route-chip input { display: none; }
+        .route-chip .dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--chip-color, #999);
+            flex-shrink: 0;
+        }
+        .route-chip.selected {
+            background: var(--chip-color, #333);
+            color: white;
+        }
+        .route-chip.selected .dot { background: white; }
+
+        /* operator selector chips reuse the route-chip styling */
+        .operator-chip-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
         /* MPZ centroid "P" marker */
         .mpz-p-icon {
             width: 18px;
@@ -667,6 +709,18 @@
         </div>
 
         <div class="form-body">
+
+            <!-- Survey Route -->
+            <div class="form-section">
+                <div class="section-title">Survey Route</div>
+                <div class="route-chip-row" id="route-chip-row"></div>
+            </div>
+
+            <!-- Operator -->
+            <div class="form-section">
+                <div class="section-title">Operator</div>
+                <div class="operator-chip-row" id="operator-chip-row"></div>
+            </div>
 
             <!-- E-Scooter Counts -->
             <div class="form-section">
@@ -1026,6 +1080,28 @@
                     </div>
                 </div>
 
+                <div class="form-group">
+                    <label for="f-ramp-upright">Parked blocking an accessible ramp — <span class="txt-upright">upright</span></label>
+                    <div class="num-row">
+                        <input type="number" id="f-ramp-upright" min="0" value="0" inputmode="numeric">
+                        <div class="steppers">
+                            <button class="step-btn" onclick="step('f-ramp-upright',-1)">−</button>
+                            <button class="step-btn" onclick="step('f-ramp-upright', 1)">+</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="f-ramp-lying">Parked blocking an accessible ramp — <span class="txt-lying">lying down</span></label>
+                    <div class="num-row">
+                        <input type="number" id="f-ramp-lying" min="0" value="0" inputmode="numeric">
+                        <div class="steppers">
+                            <button class="step-btn" onclick="step('f-ramp-lying',-1)">−</button>
+                            <button class="step-btn" onclick="step('f-ramp-lying', 1)">+</button>
+                        </div>
+                    </div>
+                </div>
+
                 </div>
             </div>
 
@@ -1197,7 +1273,9 @@ const CATEGORY_FIELDS = [
     { id: 'f-roadway-upright',          key: 'roadwayUpright',       label: 'Parked on the roadway - upright' },
     { id: 'f-roadway-lying',            key: 'roadwayLying',         label: 'Parked on the roadway - lying down' },
     { id: 'f-cycle-lane-upright',       key: 'cycleLaneUpright',     label: 'Parked on a cycle lane - upright' },
-    { id: 'f-cycle-lane-lying',         key: 'cycleLaneLying',       label: 'Parked on a cycle lane - lying down' }
+    { id: 'f-cycle-lane-lying',         key: 'cycleLaneLying',       label: 'Parked on a cycle lane - lying down' },
+    { id: 'f-ramp-upright',             key: 'rampUpright',          label: 'Parked blocking an accessible ramp - upright' },
+    { id: 'f-ramp-lying',               key: 'rampLying',            label: 'Parked blocking an accessible ramp - lying down' }
 ];
 
 const CHECKBOX_FIELDS = [
@@ -1240,6 +1318,75 @@ const OVERLAY_STYLE = {
     weight:  2.5,
     opacity: 0.9
 };
+
+// ═══════════════════════════════════════════════
+// Survey routes — derived from OVERLAY_GEOJSON, using the same
+// colours as the route lines drawn on the map
+// ═══════════════════════════════════════════════
+const ROUTE_DISPLAY_NAMES = { 'TorkkeliLoop': 'Hämeentie loop' };
+const ROUTES = (OVERLAY_GEOJSON.features || [])
+    .map(f => ({
+        name:  f.properties && (ROUTE_DISPLAY_NAMES[f.properties.Route] || f.properties.Route),
+        color: OVERLAY_COLORS[(f.properties.fid - 1) % OVERLAY_COLORS.length]
+    }))
+    .filter(r => r.name);
+
+function renderRouteChips() {
+    const row = document.getElementById('route-chip-row');
+    if (!row) return;
+
+    const lastRoute = localStorage.getItem('lastRoute') || '';
+
+    row.innerHTML = ROUTES.map(r => `
+        <label class="route-chip${r.name === lastRoute ? ' selected' : ''}" style="--chip-color:${r.color}">
+            <input type="radio" name="f-route" value="${escHtml(r.name)}" onchange="onRouteChange(this)"
+                ${r.name === lastRoute ? 'checked' : ''}>
+            <span class="dot"></span>${escHtml(r.name)}
+        </label>
+    `).join('');
+}
+
+function onRouteChange(input) {
+    document.querySelectorAll('.route-chip').forEach(el => el.classList.remove('selected'));
+    input.closest('.route-chip').classList.add('selected');
+    localStorage.setItem('lastRoute', input.value);
+}
+
+function getSelectedRoute() {
+    const checked = document.querySelector('input[name="f-route"]:checked');
+    return checked ? checked.value : '';
+}
+
+// ═══════════════════════════════════════════════
+// Operators — not persisted between saves (chosen per-observation)
+// ═══════════════════════════════════════════════
+const OPERATORS = [
+    { name: 'Ryde', color: '#2e7d32' },
+    { name: 'Dott', color: '#1565c0' },
+    { name: 'Voi',  color: '#c62828' }
+];
+
+function renderOperatorChips() {
+    const row = document.getElementById('operator-chip-row');
+    if (!row) return;
+
+    row.innerHTML = OPERATORS.map(o => `
+        <label class="route-chip" style="--chip-color:${o.color}">
+            <input type="radio" name="f-operator" value="${escHtml(o.name)}" onchange="onOperatorChange(this)">
+            <span class="dot"></span>${escHtml(o.name)}
+        </label>
+    `).join('');
+}
+
+function onOperatorChange(input) {
+    document.querySelectorAll('#operator-chip-row .route-chip').forEach(el => el.classList.remove('selected'));
+    input.closest('.route-chip').classList.add('selected');
+}
+
+function getSelectedOperator() {
+    const checked = document.querySelector('input[name="f-operator"]:checked');
+    return checked ? checked.value : '';
+}
 
 // ═══════════════════════════════════════════════
 // IndexedDB
@@ -1419,6 +1566,8 @@ function resetForm() {
     CHECKBOX_FIELDS.forEach(c => { document.getElementById(c.id).checked = false; });
     document.getElementById('f-weather').value = '';
     document.getElementById('f-comment').value = '';
+    document.querySelectorAll('input[name="f-operator"]').forEach(el => { el.checked = false; });
+    document.querySelectorAll('#operator-chip-row .route-chip').forEach(el => el.classList.remove('selected'));
     clearAllPhotos();
 }
 
@@ -1510,8 +1659,15 @@ async function savePoint() {
         weather:     document.getElementById('f-weather').value || '',
         observer:    observer,
         comment:     document.getElementById('f-comment').value.trim(),
+        route:       getSelectedRoute(),
+        operator:    getSelectedOperator(),
         photos:      currentPhotos.map(p => ({ name: p.name, blob: p.file }))
     };
+
+    const mpz = findNearestMPZ(pendingLatLng.lat, pendingLatLng.lng);
+    rec.mpzNumero     = mpz ? mpz.numero   : null;
+    rec.mpzName       = mpz ? mpz.name     : null;
+    rec.mpzDistanceM  = mpz ? mpz.distance : null;
 
     CATEGORY_FIELDS.forEach(c => {
         rec[c.key] = parseInt(document.getElementById(c.id).value) || 0;
@@ -1557,6 +1713,8 @@ function buildPopupHTML(o) {
     let html = `<div class="popup-title">🛴 ${o.total} e-scooter${o.total !== 1 ? 's' : ''}</div>
         <div><b>Observer:</b> ${escHtml(o.observer)}</div>
         <div><b>Time:</b> ${escHtml(o.timeDisplay)}</div>`;
+    if (o.route)   html += `<div><b>Route:</b> ${escHtml(o.route)}</div>`;
+    if (o.operator) html += `<div><b>Operator:</b> ${escHtml(o.operator)}</div>`;
     if (o.weather) html += `<div><b>Weather:</b> ${escHtml(o.weather)}</div>`;
     CATEGORY_FIELDS.forEach(c => {
         if (o[c.key]) html += `<div>${escHtml(c.label)}: ${o[c.key]}</div>`;
@@ -1565,6 +1723,7 @@ function buildPopupHTML(o) {
         if (o[c.key]) html += `<div>✓ ${escHtml(c.label)}</div>`;
     });
     if (o.comment) html += `<div style="margin-top:5px"><b>Comment:</b> ${escHtml(o.comment)}</div>`;
+    if (o.mpzNumero != null) html += `<div><b>Nearest MPZ:</b> ${escHtml(o.mpzName || String(o.mpzNumero))} (${o.mpzDistanceM} m)</div>`;
     html += `<div style="font-size:11px;color:#999;margin-top:5px">${o.lat.toFixed(6)}, ${o.lng.toFixed(6)}</div>`;
     return html;
 }
@@ -1651,10 +1810,13 @@ async function renderList() {
             </div>
             <div class="pc-detail">
                 <b>Coords:</b> ${o.lat.toFixed(6)}, ${o.lng.toFixed(6)}<br>
+                ${o.route ? `<b>Route:</b> ${escHtml(o.route)}<br>` : ''}
+                ${o.operator ? `<b>Operator:</b> ${escHtml(o.operator)}<br>` : ''}
                 ${o.weather ? `<b>Weather:</b> ${escHtml(o.weather)}<br>` : ''}
                 ${details || 'No incorrect parking recorded'}
                 ${flags ? `<br>${escHtml(flags)}` : ''}
                 ${o.comment ? `<br><b>Comment:</b> ${escHtml(o.comment)}` : ''}
+                ${o.mpzNumero != null ? `<br><b>Nearest MPZ:</b> ${escHtml(o.mpzName || String(o.mpzNumero))} (${o.mpzDistanceM} m)` : ''}
             </div>
         </div>`;
     }).join('');
@@ -1697,7 +1859,8 @@ async function exportData() {
         'total_escooters',
         ...CATEGORY_FIELDS.map(c => c.key),
         ...CHECKBOX_FIELDS.map(c => c.key),
-        'timestamp_iso', 'time_display', 'weather', 'observer', 'comment',
+        'timestamp_iso', 'time_display', 'weather', 'observer', 'comment', 'route', 'operator',
+        'nearest_mpz_numero', 'nearest_mpz_name', 'nearest_mpz_distance_m',
         'photo_filename_1', 'photo_filename_2', 'photo_filename_3'
     ];
 
@@ -1715,6 +1878,11 @@ async function exportData() {
             o.weather   || '',
             csvCell(o.observer),
             csvCell(o.comment || ''),
+            csvCell(o.route || ''),
+            csvCell(o.operator || ''),
+            o.mpzNumero != null ? o.mpzNumero : '',
+            csvCell(o.mpzName || ''),
+            o.mpzDistanceM != null ? o.mpzDistanceM : '',
             photoNames[0] || '',
             photoNames[1] || '',
             photoNames[2] || ''
@@ -1870,6 +2038,43 @@ async function requestPersist() {
     }
 }
 
+// ═══════════════════════════════════════════════
+// Nearest MPZ (Marked Parking Zone) matching
+// Only assigns an MPZ if the observation point falls within
+// MPZ_MATCH_THRESHOLD_M metres of a known zone centroid.
+// ═══════════════════════════════════════════════
+const MPZ_MATCH_THRESHOLD_M = 30;
+
+function haversineMeters(lat1, lon1, lat2, lon2) {
+    const R = 6371000;
+    const toRad = d => d * Math.PI / 180;
+    const dLat = toRad(lat2 - lat1);
+    const dLon = toRad(lon2 - lon1);
+    const a = Math.sin(dLat / 2) ** 2 +
+              Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function findNearestMPZ(lat, lng) {
+    if (!MPZ_GEOJSON || !MPZ_GEOJSON.features) return null;
+
+    let best = null;
+    let bestDist = Infinity;
+
+    for (const f of MPZ_GEOJSON.features) {
+        if (!f.geometry || f.geometry.type !== 'Point') continue;
+        const [lon, la] = f.geometry.coordinates;
+        const d = haversineMeters(lat, lng, la, lon);
+        if (d < bestDist) { bestDist = d; best = f; }
+    }
+
+    if (best && bestDist <= MPZ_MATCH_THRESHOLD_M) {
+        const p = best.properties || {};
+        return { numero: p.Numero != null ? p.Numero : null, name: p.name || '', distance: Math.round(bestDist) };
+    }
+    return null;
+}
+
 function loadPolygonOverlay() {
     if (!POLYGON_GEOJSON) return;
     try {
@@ -1938,6 +2143,8 @@ loadMPZOverlay();
 loadOverlay();
 
 async function init() {
+    renderRouteChips();
+    renderOperatorChips();
     await openDB();
     await requestPersist();
     await loadAll();
