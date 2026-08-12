@@ -718,7 +718,7 @@
 
             <!-- Operator -->
             <div class="form-section">
-                <div class="section-title">Operator</div>
+                <div class="section-title">Operator <span style="color:#c62828">*</span></div>
                 <div class="operator-chip-row" id="operator-chip-row"></div>
             </div>
 
@@ -1647,8 +1647,10 @@ function renderPhotoPreview() {
 async function savePoint() {
     const observer  = document.getElementById('f-observer').value.trim();
     const timeDisp  = document.getElementById('f-time').value;
+    const operator  = getSelectedOperator();
 
     if (!observer)  { showToast('⚠️ Observer name is required');    return; }
+    if (!operator)  { showToast('⚠️ Please select an operator');    return; }
 
     const btn = document.getElementById('save-btn');
     btn.disabled    = true;
@@ -1663,7 +1665,7 @@ async function savePoint() {
         observer:    observer,
         comment:     document.getElementById('f-comment').value.trim(),
         route:       getSelectedRoute(),
-        operator:    getSelectedOperator(),
+        operator:    operator,
         photos:      currentPhotos.map(p => ({ name: p.name, blob: p.file }))
     };
 
