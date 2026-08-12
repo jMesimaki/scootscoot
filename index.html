@@ -210,7 +210,8 @@
 
         .form-group input[type="number"],
         .form-group input[type="text"],
-        .form-group select {
+        .form-group select,
+        .form-group textarea {
             width: 100%;
             padding: 13px 14px;
             border: 1.5px solid #ddd;
@@ -221,9 +222,12 @@
             -webkit-appearance: none;
             appearance: none;
             transition: border-color 0.2s, background 0.2s;
+            font-family: inherit;
+            resize: vertical;
         }
         .form-group input:focus,
-        .form-group select:focus {
+        .form-group select:focus,
+        .form-group textarea:focus {
             outline: none;
             border-color: #1a73e8;
             background: white;
@@ -258,8 +262,12 @@
         .step-btn:active { background: #f0f4f8; }
 
         /* photo input */
+        .photo-btn-row {
+            display: flex;
+            gap: 10px;
+        }
         .photo-input-area {
-            width: 100%;
+            flex: 1;
             padding: 14px;
             border: 1.5px dashed #ccc;
             border-radius: 10px;
@@ -272,28 +280,39 @@
         .photo-input-area input[type="file"] {
             display: none;
         }
-
-        #photo-preview {
-            display: none;
+        #photo-count-note {
+            font-size: 12px;
+            color: #888;
+            margin-top: 8px;
+        }
+        #photo-preview-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
             margin-top: 10px;
+        }
+        #photo-preview-grid:empty {
+            margin-top: 0;
+        }
+        .photo-thumb-wrap {
             position: relative;
         }
-        #photo-preview img {
+        .photo-thumb-wrap img {
             width: 100%;
-            max-height: 200px;
+            height: 90px;
             object-fit: cover;
             border-radius: 10px;
             display: block;
         }
-        #remove-photo-btn {
+        .photo-thumb-wrap button {
             position: absolute;
-            top: 8px; right: 8px;
+            top: 4px; right: 4px;
             background: rgba(0,0,0,0.6);
             color: white;
             border: none;
             border-radius: 50%;
-            width: 30px; height: 30px;
-            font-size: 16px;
+            width: 24px; height: 24px;
+            font-size: 13px;
             cursor: pointer;
             display: flex;
             align-items: center;
@@ -450,6 +469,18 @@
             margin-top: 8px;
             float: right;
             margin-left: 10px;
+        }
+        .pc-thumbs {
+            float: right;
+            display: flex;
+            gap: 6px;
+            margin-top: 8px;
+            margin-left: 10px;
+        }
+        .pc-thumbs .pc-thumb {
+            width: 56px; height: 56px;
+            float: none;
+            margin: 0;
         }
 
         /* ── Export Panel ── */
@@ -899,19 +930,33 @@
                 </div>
             </div>
 
-            <!-- Photo -->
+            <!-- Comment -->
             <div class="form-section">
-                <div class="section-title">Photo (optional)</div>
+                <div class="section-title">Comment</div>
 
                 <div class="form-group">
-                    <label class="photo-input-area" for="f-photo">
-                        📷 Tap to take a photo or choose from gallery
-                        <input type="file" id="f-photo" accept="image/*" onchange="previewPhoto(this)">
-                    </label>
-                    <div id="photo-preview">
-                        <img id="photo-img" src="" alt="Preview">
-                        <button id="remove-photo-btn" onclick="removePhoto()">✕</button>
+                    <label for="f-comment">Free comment (optional)</label>
+                    <textarea id="f-comment" rows="3" placeholder="Add any additional notes about this observation…"></textarea>
+                </div>
+            </div>
+
+            <!-- Photo -->
+            <div class="form-section">
+                <div class="section-title">Photos (optional, up to 3)</div>
+
+                <div class="form-group">
+                    <div class="photo-btn-row">
+                        <label class="photo-input-area" for="f-photo-camera">
+                            📷 Take photo
+                            <input type="file" id="f-photo-camera" accept="image/*" capture="environment" onchange="handlePhotoInput(this)">
+                        </label>
+                        <label class="photo-input-area" for="f-photo-gallery">
+                            🖼️ Choose from gallery
+                            <input type="file" id="f-photo-gallery" accept="image/*" multiple onchange="handlePhotoInput(this)">
+                        </label>
                     </div>
+                    <div id="photo-count-note"></div>
+                    <div id="photo-preview-grid"></div>
                 </div>
             </div>
 
@@ -1127,7 +1172,8 @@ const markerIndex = {}; // id → L.marker
 let tempMarker    = null;
 let pendingLatLng = null;
 let addMode       = false;
-let currentPhoto  = null; // { file, name }
+let currentPhotos = []; // [{ file, name }, …] — max MAX_PHOTOS
+const MAX_PHOTOS  = 3;
 
 // Map click handler
 map.on('click', e => {
@@ -1207,7 +1253,8 @@ function resetForm() {
     CATEGORY_FIELDS.forEach(c => { document.getElementById(c.id).value = '0'; });
     CHECKBOX_FIELDS.forEach(c => { document.getElementById(c.id).checked = false; });
     document.getElementById('f-weather').value = '';
-    removePhoto();
+    document.getElementById('f-comment').value = '';
+    clearAllPhotos();
 }
 
 // ═══════════════════════════════════════════════
@@ -1222,25 +1269,59 @@ function step(id, delta) {
 // ═══════════════════════════════════════════════
 // Photo
 // ═══════════════════════════════════════════════
-function previewPhoto(input) {
-    if (!input.files || !input.files[0]) return;
-    const file = input.files[0];
-    const ext  = file.name.split('.').pop() || 'jpg';
-    currentPhoto = { file, name: `photo_${Date.now()}.${ext}` };
+function handlePhotoInput(input) {
+    if (!input.files || !input.files.length) return;
 
-    const reader = new FileReader();
-    reader.onload = e => {
-        document.getElementById('photo-img').src       = e.target.result;
-        document.getElementById('photo-preview').style.display = 'block';
-    };
-    reader.readAsDataURL(file);
+    const files = Array.from(input.files);
+    const room  = MAX_PHOTOS - currentPhotos.length;
+
+    if (room <= 0) {
+        showToast(`⚠️ Maximum ${MAX_PHOTOS} photos per observation`);
+        input.value = '';
+        return;
+    }
+
+    if (files.length > room) {
+        showToast(`⚠️ Only ${room} more photo${room !== 1 ? 's' : ''} allowed — added first ${room}`);
+    }
+
+    files.slice(0, room).forEach((file, i) => {
+        const ext = file.name.split('.').pop() || 'jpg';
+        currentPhotos.push({ file, name: `photo_${Date.now()}_${currentPhotos.length}_${i}.${ext}` });
+    });
+
+    input.value = ''; // allow re-selecting the same file later
+    renderPhotoPreview();
 }
 
-function removePhoto() {
-    currentPhoto = null;
-    document.getElementById('f-photo').value          = '';
-    document.getElementById('photo-preview').style.display = 'none';
-    document.getElementById('photo-img').src          = '';
+function removePhotoAt(index) {
+    currentPhotos.splice(index, 1);
+    renderPhotoPreview();
+}
+
+function clearAllPhotos() {
+    currentPhotos = [];
+    document.getElementById('f-photo-camera').value  = '';
+    document.getElementById('f-photo-gallery').value = '';
+    renderPhotoPreview();
+}
+
+function renderPhotoPreview() {
+    const grid = document.getElementById('photo-preview-grid');
+    const note = document.getElementById('photo-count-note');
+
+    note.textContent = currentPhotos.length
+        ? `${currentPhotos.length} / ${MAX_PHOTOS} photo${currentPhotos.length !== 1 ? 's' : ''} added`
+        : '';
+
+    if (!currentPhotos.length) { grid.innerHTML = ''; return; }
+
+    grid.innerHTML = currentPhotos.map((p, i) =>
+        `<div class="photo-thumb-wrap">
+            <img src="${URL.createObjectURL(p.file)}" alt="">
+            <button onclick="removePhotoAt(${i})" aria-label="Remove photo">✕</button>
+        </div>`
+    ).join('');
 }
 
 // ═══════════════════════════════════════════════
@@ -1263,8 +1344,8 @@ async function savePoint() {
         timeDisplay: timeDisp,
         weather:     document.getElementById('f-weather').value || '',
         observer:    observer,
-        photoName:   currentPhoto ? currentPhoto.name : null,
-        photoBlob:   currentPhoto ? currentPhoto.file : null
+        comment:     document.getElementById('f-comment').value.trim(),
+        photos:      currentPhotos.map(p => ({ name: p.name, blob: p.file }))
     };
 
     CATEGORY_FIELDS.forEach(c => {
@@ -1298,6 +1379,15 @@ async function savePoint() {
 // ═══════════════════════════════════════════════
 // Markers
 // ═══════════════════════════════════════════════
+// Returns [{name, blob}, …] for a record, supporting both the current
+// multi-photo schema (o.photos) and legacy single-photo records
+// (o.photoName / o.photoBlob) saved before this feature existed.
+function getPhotoList(o) {
+    if (Array.isArray(o.photos)) return o.photos;
+    if (o.photoBlob) return [{ name: o.photoName, blob: o.photoBlob }];
+    return [];
+}
+
 function buildPopupHTML(o) {
     let html = `<div class="popup-title">🛴 ${o.total} e-scooter${o.total !== 1 ? 's' : ''}</div>
         <div><b>Observer:</b> ${escHtml(o.observer)}</div>
@@ -1309,6 +1399,7 @@ function buildPopupHTML(o) {
     CHECKBOX_FIELDS.forEach(c => {
         if (o[c.key]) html += `<div>✓ ${escHtml(c.label)}</div>`;
     });
+    if (o.comment) html += `<div style="margin-top:5px"><b>Comment:</b> ${escHtml(o.comment)}</div>`;
     html += `<div style="font-size:11px;color:#999;margin-top:5px">${o.lat.toFixed(6)}, ${o.lng.toFixed(6)}</div>`;
     return html;
 }
@@ -1380,12 +1471,12 @@ async function renderList() {
             .map(c => `✓ ${c.label}`)
             .join(' · ');
 
-        const thumbTag = o.photoBlob
-            ? `<img class="pc-thumb" src="${URL.createObjectURL(o.photoBlob)}" alt="">`
-            : '';
+        const thumbTag = getPhotoList(o)
+            .map(p => `<img class="pc-thumb" src="${URL.createObjectURL(p.blob)}" alt="">`)
+            .join('');
 
         return `<div class="point-card">
-            ${thumbTag}
+            ${thumbTag ? `<div class="pc-thumbs">${thumbTag}</div>` : ''}
             <div class="pc-header">
                 <div>
                     <div class="pc-title">🛴 ${o.total} e-scooter${o.total !== 1 ? 's' : ''}</div>
@@ -1398,6 +1489,7 @@ async function renderList() {
                 ${o.weather ? `<b>Weather:</b> ${escHtml(o.weather)}<br>` : ''}
                 ${details || 'No incorrect parking recorded'}
                 ${flags ? `<br>${escHtml(flags)}` : ''}
+                ${o.comment ? `<br><b>Comment:</b> ${escHtml(o.comment)}` : ''}
             </div>
         </div>`;
     }).join('');
@@ -1417,7 +1509,7 @@ async function deletePoint(id) {
 // ═══════════════════════════════════════════════
 async function updateExportInfo() {
     const all    = await dbGetAll();
-    const photos = all.filter(o => o.photoBlob).length;
+    const photos = all.reduce((sum, o) => sum + getPhotoList(o).length, 0);
     document.getElementById('export-info').innerHTML =
         `<strong>${all.length} observation${all.length !== 1 ? 's' : ''}</strong> recorded on this device<br>
          <strong>${photos} photo${photos !== 1 ? 's' : ''}</strong> attached<br><br>
@@ -1440,30 +1532,37 @@ async function exportData() {
         'total_escooters',
         ...CATEGORY_FIELDS.map(c => c.key),
         ...CHECKBOX_FIELDS.map(c => c.key),
-        'timestamp_iso', 'time_display', 'weather', 'observer', 'photo_filename'
+        'timestamp_iso', 'time_display', 'weather', 'observer', 'comment',
+        'photo_filename_1', 'photo_filename_2', 'photo_filename_3'
     ];
 
-    const csvRows = all.map(o => [
-        o.id,
-        o.lng.toFixed(7),
-        o.lat.toFixed(7),
-        o.total,
-        ...CATEGORY_FIELDS.map(c => o[c.key] || 0),
-        ...CHECKBOX_FIELDS.map(c => o[c.key] ? 1 : 0),
-        o.timestamp,
-        csvCell(o.timeDisplay),
-        o.weather   || '',
-        csvCell(o.observer),
-        o.photoName || ''
-    ]);
+    const csvRows = all.map(o => {
+        const photoNames = getPhotoList(o).map(p => p.name);
+        return [
+            o.id,
+            o.lng.toFixed(7),
+            o.lat.toFixed(7),
+            o.total,
+            ...CATEGORY_FIELDS.map(c => o[c.key] || 0),
+            ...CHECKBOX_FIELDS.map(c => o[c.key] ? 1 : 0),
+            o.timestamp,
+            csvCell(o.timeDisplay),
+            o.weather   || '',
+            csvCell(o.observer),
+            csvCell(o.comment || ''),
+            photoNames[0] || '',
+            photoNames[1] || '',
+            photoNames[2] || ''
+        ];
+    });
 
     const csv = [headers.join(','), ...csvRows.map(r => r.join(','))].join('\r\n');
     zip.file('observations.csv', csv);
 
     for (const o of all) {
-        if (o.photoBlob && o.photoName) {
-            photos.file(o.photoName, o.photoBlob);
-        }
+        getPhotoList(o).forEach(p => {
+            if (p.blob && p.name) photos.file(p.name, p.blob);
+        });
     }
 
     const blob = await zip.generateAsync({ type: 'blob' });
