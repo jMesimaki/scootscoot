@@ -1157,20 +1157,21 @@ function operatorColor(name) {
 // Categories without hasImpede map directly, e.g. 'carspace' + 'Upright' → 'carspaceUpright'.
 // ═══════════════════════════════════════════════
 const CATEGORY_TYPES = [
-    { key: 'sq',               label: 'Parked in square',                            correct: true,  hasImpede: false },
-    { key: 'partial',          label: 'Parked partially in square',                   correct: false, hasImpede: true  },
-    { key: 'close',            label: 'Parked close to square',                       correct: false, hasImpede: true  },
-    { key: 'out',              label: 'Parked outside square',                        correct: false, hasImpede: true  },
-    { key: 'bikerack',         label: 'Parked in bike rack',                          correct: true,  hasImpede: false },
-    { key: 'carspace',         label: 'Parked in a car parking space',                correct: false, hasImpede: false },
-    { key: 'disabledSpace',    label: 'Parking in a disabled car parking space',      correct: false, hasImpede: false },
-    { key: 'obstructDoor',     label: 'Parked obstructing a door',                    correct: false, hasImpede: false },
-    { key: 'obstructCrossing', label: 'Parked obstructing a zebra crossing or similar', correct: false, hasImpede: false },
-    { key: 'busTramStop',      label: 'Parked at a bus or tram stop',                 correct: false, hasImpede: false },
-    { key: 'roadway',          label: 'Parked on the roadway',                        correct: false, hasImpede: false },
-    { key: 'cycleLane',        label: 'Parked on a cycle lane',                       correct: false, hasImpede: false },
-    { key: 'ramp',             label: 'Parked blocking an accessible ramp',           correct: false, hasImpede: false }
+    { key: 'sq',               label: 'In square',                            correct: true,  hasImpede: false },
+    { key: 'partial',          label: 'Partially in square',                  correct: false, hasImpede: true  },
+    { key: 'close',            label: 'Close to square',                      correct: false, hasImpede: true  },
+    { key: 'out',              label: 'Outside square',                       correct: false, hasImpede: true  },
+    { key: 'bikerack',         label: 'In bike rack',                         correct: true,  hasImpede: false },
+    { key: 'carspace',         label: 'In a car parking space',               correct: false, hasImpede: false },
+    { key: 'disabledSpace',    label: 'In a disabled car parking space',      correct: false, hasImpede: false },
+    { key: 'obstructDoor',     label: 'Obstructing a door',                   correct: false, hasImpede: false },
+    { key: 'obstructCrossing', label: 'Obstructing a zebra crossing or similar', correct: false, hasImpede: false },
+    { key: 'busTramStop',      label: 'At a bus or tram stop',                correct: false, hasImpede: false },
+    { key: 'roadway',          label: 'On the roadway',                       correct: false, hasImpede: false },
+    { key: 'cycleLane',        label: 'On a cycle lane',                      correct: false, hasImpede: false },
+    { key: 'ramp',             label: 'Blocking an accessible ramp',          correct: false, hasImpede: false }
 ];
+
 
 function categoryFullKey(baseKey, orientation, impede) {
     const orientSuffix = orientation === 'upright' ? 'Upright' : 'Lying';
