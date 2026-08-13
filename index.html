@@ -1788,7 +1788,7 @@ async function updateExportInfo() {
         `<strong>${all.length} observation${all.length !== 1 ? 's' : ''}</strong> recorded on this device<br>
          <strong>${photos} photo${photos !== 1 ? 's' : ''}</strong> attached<br><br>
          ZIP will contain:<br>
-         📄 <code>observations.csv</code> — one row per point, with lon/lat coordinates<br>
+         📄 <code>observations.csv</code> — one row per point, with lon/lat coordinates and a per-operator vehicle count<br>
          📄 <code>observations_by_vehicle.csv</code> — one row per operator/category combination<br>
          📷 <code>photos/</code> — all uploaded photographs`;
 }
@@ -1802,18 +1802,32 @@ async function exportData() {
     const zip    = new JSZip();
     const photos = zip.folder('photos');
 
+    // Sanitized column name per operator, e.g. "Donkey Republic bicycles" → "count_Donkey_Republic_bicycles"
+    const operatorSlug = name => name.replace(/[^a-zA-Z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+
+    function operatorCounts(o) {
+        const counts = {};
+        OPERATORS.forEach(op => { counts[op.name] = 0; });
+        getVehicleEntries(o).forEach(e => {
+            counts[e.operator] = (counts[e.operator] || 0) + e.qty;
+        });
+        return counts;
+    }
+
     const headers = [
         'id', 'longitude', 'latitude',
         'total_escooters',
         ...CATEGORY_FIELDS.map(c => c.key),
         ...CHECKBOX_FIELDS.map(c => c.key),
-        'timestamp_iso', 'time_display', 'weather', 'observer', 'comment', 'route', 'operators',
+        'timestamp_iso', 'time_display', 'weather', 'observer', 'comment', 'route',
+        ...OPERATORS.map(op => `count_${operatorSlug(op.name)}`),
         'nearest_mpz_numero', 'nearest_mpz_name', 'nearest_mpz_distance_m',
         'photo_filename_1', 'photo_filename_2', 'photo_filename_3'
     ];
 
     const csvRows = all.map(o => {
         const photoNames = getPhotoList(o).map(p => p.name);
+        const counts     = operatorCounts(o);
         return [
             o.id,
             o.lng.toFixed(7),
@@ -1827,7 +1841,7 @@ async function exportData() {
             csvCell(o.observer),
             csvCell(o.comment || ''),
             csvCell(o.route || ''),
-            csvCell(getOperatorsList(o).join('; ')),
+            ...OPERATORS.map(op => counts[op.name] || 0),
             o.mpzNumero != null ? o.mpzNumero : '',
             csvCell(o.mpzName || ''),
             o.mpzDistanceM != null ? o.mpzDistanceM : '',
