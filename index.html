@@ -319,6 +319,95 @@
             justify-content: center;
         }
 
+        /* vehicle entry builder */
+        .add-entry-box {
+            background: #f7f9fc;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 14px;
+            margin-top: 6px;
+        }
+        .add-entry-box .form-group { margin-bottom: 12px; }
+        .add-entry-box .form-group:last-of-type { margin-bottom: 0; }
+        .orientation-toggle {
+            display: flex;
+            gap: 8px;
+        }
+        .orient-btn {
+            flex: 1;
+            padding: 12px;
+            border: 1.5px solid #ddd;
+            border-radius: 10px;
+            background: white;
+            font-size: 14px;
+            font-weight: 600;
+            color: #333;
+            cursor: pointer;
+        }
+        .orient-btn.selected {
+            background: #1a73e8;
+            border-color: #1a73e8;
+            color: white;
+        }
+        #add-entry-btn {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 10px;
+            background: #1a73e8;
+            color: white;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            margin-top: 4px;
+        }
+        #add-entry-btn:active { background: #1558b0; }
+
+        .vehicle-entries-list { margin-bottom: 12px; }
+        .vehicle-entries-list:empty { margin-bottom: 0; }
+        .entry-card {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 12px;
+            border-radius: 10px;
+            border: 1.5px solid #eee;
+            margin-bottom: 8px;
+            background: white;
+        }
+        .entry-card .entry-dot {
+            width: 12px; height: 12px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+        .entry-card .entry-info { flex: 1; font-size: 13px; line-height: 1.4; }
+        .entry-card .entry-info b { display: block; font-size: 13.5px; }
+        .entry-card .entry-qty {
+            font-size: 15px;
+            font-weight: 700;
+            color: #1a73e8;
+            padding: 0 4px;
+        }
+        .entry-card .entry-remove {
+            background: none;
+            border: none;
+            color: #c62828;
+            font-size: 16px;
+            cursor: pointer;
+            padding: 4px 6px;
+        }
+        .entries-total {
+            font-size: 13px;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .entries-empty-note {
+            font-size: 13px;
+            color: #888;
+            margin-bottom: 10px;
+        }
+
         /* category sub-group heading */
         .subgroup-title {
             font-size: 12px;
@@ -716,394 +805,56 @@
                 <div class="route-chip-row" id="route-chip-row"></div>
             </div>
 
-            <!-- Operator -->
+            <!-- Vehicles (multi-operator, single point) -->
             <div class="form-section">
-                <div class="section-title">Operator <span style="color:#c62828">*</span></div>
-                <div class="operator-chip-row" id="operator-chip-row"></div>
+                <div class="section-title">Vehicles <span style="color:#c62828">*</span></div>
+
+                <div class="entries-total" id="entries-total" style="display:none;"></div>
+                <div class="vehicle-entries-list" id="vehicle-entries-list"></div>
+                <div class="entries-empty-note" id="entries-empty-note">No vehicles added yet — use the form below to add each operator/category combination present at this location.</div>
+
+                <div class="add-entry-box">
+                    <div class="form-group">
+                        <label>Operator</label>
+                        <div class="operator-chip-row" id="entry-operator-row"></div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="entry-category">Parking category</label>
+                        <select id="entry-category" onchange="onCategoryChange()"></select>
+                    </div>
+
+                    <div class="form-group" id="entry-impede-group" style="display:none;">
+                        <label>Impact on other road users</label>
+                        <div class="orientation-toggle" id="entry-impede-row">
+                            <button type="button" class="orient-btn" data-val="impede" onclick="setImpede(this)">Impeding</button>
+                            <button type="button" class="orient-btn selected" data-val="noimpede" onclick="setImpede(this)">Not impeding</button>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Orientation</label>
+                        <div class="orientation-toggle" id="entry-orientation-row">
+                            <button type="button" class="orient-btn selected" data-val="upright" onclick="setOrientation(this)">Upright</button>
+                            <button type="button" class="orient-btn" data-val="lying" onclick="setOrientation(this)">Lying down</button>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="entry-qty">Quantity</label>
+                        <div class="num-row">
+                            <input type="number" id="entry-qty" min="1" value="1" inputmode="numeric">
+                            <div class="steppers">
+                                <button class="step-btn" onclick="step('entry-qty',-1)">−</button>
+                                <button class="step-btn" onclick="step('entry-qty', 1)">+</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button id="add-entry-btn" onclick="addVehicleEntry()">+ Add to point</button>
+                </div>
             </div>
 
-            <!-- E-Scooter Counts -->
-            <div class="form-section">
-                <div class="section-title">Vehicle Counts</div>
-
-                <div class="subgroup-title no-border">Parked in square</div>
-
-                <div class="form-group">
-                    <label for="f-sq-upright">Parked in square — <span class="txt-upright">upright</span></label>
-                    <div class="num-row">
-                        <input type="number" id="f-sq-upright" min="0" value="0" inputmode="numeric">
-                        <div class="steppers">
-                            <button class="step-btn" onclick="step('f-sq-upright',-1)">−</button>
-                            <button class="step-btn" onclick="step('f-sq-upright', 1)">+</button>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <label for="f-sq-lying">Parked in square — <span class="txt-lying">lying down</span></label>
-                    <div class="num-row">
-                        <input type="number" id="f-sq-lying" min="0" value="0" inputmode="numeric">
-                        <div class="steppers">
-                            <button class="step-btn" onclick="step('f-sq-lying',-1)">−</button>
-                            <button class="step-btn" onclick="step('f-sq-lying', 1)">+</button>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="subgroup-title">Parked partially in square</div>
-
-                <div class="subgroup-shaded shade-partial">
-
-                <div class="form-group">
-                    <label for="f-partial-impede-upright">Parked partially in square — <span class="txt-impede">impeding road users</span> — <span class="txt-upright">upright</span></label>
-                    <div class="num-row">
-                        <input type="number" id="f-partial-impede-upright" min="0" value="0" inputmode="numeric">
-                        <div class="steppers">
-                            <button class="step-btn" onclick="step('f-partial-impede-upright',-1)">−</button>
-                            <button class="step-btn" onclick="step('f-partial-impede-upright', 1)">+</button>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <label for="f-partial-impede-lying">Parked partially in square — <span class="txt-impede">impeding road users</span> — <span class="txt-lying">lying down</span></label>
-                    <div class="num-row">
-                        <input type="number" id="f-partial-impede-lying" min="0" value="0" inputmode="numeric">
-                        <div class="steppers">
-                            <button class="step-btn" onclick="step('f-partial-impede-lying',-1)">−</button>
-                            <button class="step-btn" onclick="step('f-partial-impede-lying', 1)">+</button>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <label for="f-partial-noimpede-upright">Parked partially in square — <span class="txt-noimpede">not impeding road users</span> — <span class="txt-upright">upright</span></label>
-                    <div class="num-row">
-                        <input type="number" id="f-partial-noimpede-upright" min="0" value="0" inputmode="numeric">
-                        <div class="steppers">
-                            <button class="step-btn" onclick="step('f-partial-noimpede-upright',-1)">−</button>
-                            <button class="step-btn" onclick="step('f-partial-noimpede-upright', 1)">+</button>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <label for="f-partial-noimpede-lying">Parked partially in square — <span class="txt-noimpede">not impeding road users</span> — <span class="txt-lying">lying down</span></label>
-                    <div class="num-row">
-                        <input type="number" id="f-partial-noimpede-lying" min="0" value="0" inputmode="numeric">
-                        <div class="steppers">
-                            <button class="step-btn" onclick="step('f-partial-noimpede-lying',-1)">−</button>
-                            <button class="step-btn" onclick="step('f-partial-noimpede-lying', 1)">+</button>
-                        </div>
-                    </div>
-                </div>
-
-                </div>
-
-                <div class="subgroup-title">Parked close to square</div>
-
-                <div class="subgroup-shaded shade-close">
-
-                <div class="form-group">
-                    <label for="f-close-impede-upright">Parked close to square — <span class="txt-impede">impeding other road users</span> — <span class="txt-upright">upright</span></label>
-                    <div class="num-row">
-                        <input type="number" id="f-close-impede-upright" min="0" value="0" inputmode="numeric">
-                        <div class="steppers">
-                            <button class="step-btn" onclick="step('f-close-impede-upright',-1)">−</button>
-                            <button class="step-btn" onclick="step('f-close-impede-upright', 1)">+</button>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <label for="f-close-impede-lying">Parked close to square — <span class="txt-impede">impeding other road users</span> — <span class="txt-lying">lying down</span></label>
-                    <div class="num-row">
-                        <input type="number" id="f-close-impede-lying" min="0" value="0" inputmode="numeric">
-                        <div class="steppers">
-                            <button class="step-btn" onclick="step('f-close-impede-lying',-1)">−</button>
-                            <button class="step-btn" onclick="step('f-close-impede-lying', 1)">+</button>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <label for="f-close-noimpede-upright">Parked close to square — <span class="txt-noimpede">not impeding other road users</span> — <span class="txt-upright">upright</span></label>
-                    <div class="num-row">
-                        <input type="number" id="f-close-noimpede-upright" min="0" value="0" inputmode="numeric">
-                        <div class="steppers">
-                            <button class="step-btn" onclick="step('f-close-noimpede-upright',-1)">−</button>
-                            <button class="step-btn" onclick="step('f-close-noimpede-upright', 1)">+</button>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <label for="f-close-noimpede-lying">Parked close to square — <span class="txt-noimpede">not impeding other road users</span> — <span class="txt-lying">lying down</span></label>
-                    <div class="num-row">
-                        <input type="number" id="f-close-noimpede-lying" min="0" value="0" inputmode="numeric">
-                        <div class="steppers">
-                            <button class="step-btn" onclick="step('f-close-noimpede-lying',-1)">−</button>
-                            <button class="step-btn" onclick="step('f-close-noimpede-lying', 1)">+</button>
-                        </div>
-                    </div>
-                </div>
-
-                </div>
-
-                <div class="subgroup-title">Parked outside square</div>
-
-                <div class="subgroup-shaded shade-outside">
-
-                <div class="form-group">
-                    <label for="f-out-impede-upright">Parked outside square — <span class="txt-impede">impeding road users</span> — <span class="txt-upright">upright</span></label>
-                    <div class="num-row">
-                        <input type="number" id="f-out-impede-upright" min="0" value="0" inputmode="numeric">
-                        <div class="steppers">
-                            <button class="step-btn" onclick="step('f-out-impede-upright',-1)">−</button>
-                            <button class="step-btn" onclick="step('f-out-impede-upright', 1)">+</button>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <label for="f-out-impede-lying">Parked outside square — <span class="txt-impede">impeding road users</span> — <span class="txt-lying">lying down</span></label>
-                    <div class="num-row">
-                        <input type="number" id="f-out-impede-lying" min="0" value="0" inputmode="numeric">
-                        <div class="steppers">
-                            <button class="step-btn" onclick="step('f-out-impede-lying',-1)">−</button>
-                            <button class="step-btn" onclick="step('f-out-impede-lying', 1)">+</button>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <label for="f-out-noimpede-upright">Parked outside square — <span class="txt-noimpede">not impeding road users</span> — <span class="txt-upright">upright</span></label>
-                    <div class="num-row">
-                        <input type="number" id="f-out-noimpede-upright" min="0" value="0" inputmode="numeric">
-                        <div class="steppers">
-                            <button class="step-btn" onclick="step('f-out-noimpede-upright',-1)">−</button>
-                            <button class="step-btn" onclick="step('f-out-noimpede-upright', 1)">+</button>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <label for="f-out-noimpede-lying">Parked outside square — <span class="txt-noimpede">not impeding road users</span> — <span class="txt-lying">lying down</span></label>
-                    <div class="num-row">
-                        <input type="number" id="f-out-noimpede-lying" min="0" value="0" inputmode="numeric">
-                        <div class="steppers">
-                            <button class="step-btn" onclick="step('f-out-noimpede-lying',-1)">−</button>
-                            <button class="step-btn" onclick="step('f-out-noimpede-lying', 1)">+</button>
-                        </div>
-                    </div>
-                </div>
-
-                </div>
-
-                <div class="subgroup-title">Other locations</div>
-
-                <div class="subgroup-shaded shade-other">
-
-                <div class="form-group">
-                    <label for="f-bikerack-upright">Parked in bike rack — <span class="txt-upright">upright</span></label>
-                    <div class="num-row">
-                        <input type="number" id="f-bikerack-upright" min="0" value="0" inputmode="numeric">
-                        <div class="steppers">
-                            <button class="step-btn" onclick="step('f-bikerack-upright',-1)">−</button>
-                            <button class="step-btn" onclick="step('f-bikerack-upright', 1)">+</button>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <label for="f-bikerack-lying">Parked in bike rack — <span class="txt-lying">lying down</span></label>
-                    <div class="num-row">
-                        <input type="number" id="f-bikerack-lying" min="0" value="0" inputmode="numeric">
-                        <div class="steppers">
-                            <button class="step-btn" onclick="step('f-bikerack-lying',-1)">−</button>
-                            <button class="step-btn" onclick="step('f-bikerack-lying', 1)">+</button>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <label for="f-carspace-upright">Parked in a car parking space — <span class="txt-upright">upright</span></label>
-                    <div class="num-row">
-                        <input type="number" id="f-carspace-upright" min="0" value="0" inputmode="numeric">
-                        <div class="steppers">
-                            <button class="step-btn" onclick="step('f-carspace-upright',-1)">−</button>
-                            <button class="step-btn" onclick="step('f-carspace-upright', 1)">+</button>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <label for="f-carspace-lying">Parked in a car parking space — <span class="txt-lying">lying down</span></label>
-                    <div class="num-row">
-                        <input type="number" id="f-carspace-lying" min="0" value="0" inputmode="numeric">
-                        <div class="steppers">
-                            <button class="step-btn" onclick="step('f-carspace-lying',-1)">−</button>
-                            <button class="step-btn" onclick="step('f-carspace-lying', 1)">+</button>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <label for="f-disabled-space-upright">Parking in a disabled car parking space — <span class="txt-upright">upright</span></label>
-                    <div class="num-row">
-                        <input type="number" id="f-disabled-space-upright" min="0" value="0" inputmode="numeric">
-                        <div class="steppers">
-                            <button class="step-btn" onclick="step('f-disabled-space-upright',-1)">−</button>
-                            <button class="step-btn" onclick="step('f-disabled-space-upright', 1)">+</button>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <label for="f-disabled-space-lying">Parking in a disabled car parking space — <span class="txt-lying">lying down</span></label>
-                    <div class="num-row">
-                        <input type="number" id="f-disabled-space-lying" min="0" value="0" inputmode="numeric">
-                        <div class="steppers">
-                            <button class="step-btn" onclick="step('f-disabled-space-lying',-1)">−</button>
-                            <button class="step-btn" onclick="step('f-disabled-space-lying', 1)">+</button>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <label for="f-obstruct-door-upright">Parked obstructing a door — <span class="txt-upright">upright</span></label>
-                    <div class="num-row">
-                        <input type="number" id="f-obstruct-door-upright" min="0" value="0" inputmode="numeric">
-                        <div class="steppers">
-                            <button class="step-btn" onclick="step('f-obstruct-door-upright',-1)">−</button>
-                            <button class="step-btn" onclick="step('f-obstruct-door-upright', 1)">+</button>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <label for="f-obstruct-door-lying">Parked obstructing a door — <span class="txt-lying">lying down</span></label>
-                    <div class="num-row">
-                        <input type="number" id="f-obstruct-door-lying" min="0" value="0" inputmode="numeric">
-                        <div class="steppers">
-                            <button class="step-btn" onclick="step('f-obstruct-door-lying',-1)">−</button>
-                            <button class="step-btn" onclick="step('f-obstruct-door-lying', 1)">+</button>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <label for="f-obstruct-crossing-upright">Parked obstructing a zebra crossing or similar — <span class="txt-upright">upright</span></label>
-                    <div class="num-row">
-                        <input type="number" id="f-obstruct-crossing-upright" min="0" value="0" inputmode="numeric">
-                        <div class="steppers">
-                            <button class="step-btn" onclick="step('f-obstruct-crossing-upright',-1)">−</button>
-                            <button class="step-btn" onclick="step('f-obstruct-crossing-upright', 1)">+</button>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <label for="f-obstruct-crossing-lying">Parked obstructing a zebra crossing or similar — <span class="txt-lying">lying down</span></label>
-                    <div class="num-row">
-                        <input type="number" id="f-obstruct-crossing-lying" min="0" value="0" inputmode="numeric">
-                        <div class="steppers">
-                            <button class="step-btn" onclick="step('f-obstruct-crossing-lying',-1)">−</button>
-                            <button class="step-btn" onclick="step('f-obstruct-crossing-lying', 1)">+</button>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <label for="f-bus-tram-stop-upright">Parked at a bus or tram stop — <span class="txt-upright">upright</span></label>
-                    <div class="num-row">
-                        <input type="number" id="f-bus-tram-stop-upright" min="0" value="0" inputmode="numeric">
-                        <div class="steppers">
-                            <button class="step-btn" onclick="step('f-bus-tram-stop-upright',-1)">−</button>
-                            <button class="step-btn" onclick="step('f-bus-tram-stop-upright', 1)">+</button>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <label for="f-bus-tram-stop-lying">Parked at a bus or tram stop — <span class="txt-lying">lying down</span></label>
-                    <div class="num-row">
-                        <input type="number" id="f-bus-tram-stop-lying" min="0" value="0" inputmode="numeric">
-                        <div class="steppers">
-                            <button class="step-btn" onclick="step('f-bus-tram-stop-lying',-1)">−</button>
-                            <button class="step-btn" onclick="step('f-bus-tram-stop-lying', 1)">+</button>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <label for="f-roadway-upright">Parked on the roadway — <span class="txt-upright">upright</span></label>
-                    <div class="num-row">
-                        <input type="number" id="f-roadway-upright" min="0" value="0" inputmode="numeric">
-                        <div class="steppers">
-                            <button class="step-btn" onclick="step('f-roadway-upright',-1)">−</button>
-                            <button class="step-btn" onclick="step('f-roadway-upright', 1)">+</button>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <label for="f-roadway-lying">Parked on the roadway — <span class="txt-lying">lying down</span></label>
-                    <div class="num-row">
-                        <input type="number" id="f-roadway-lying" min="0" value="0" inputmode="numeric">
-                        <div class="steppers">
-                            <button class="step-btn" onclick="step('f-roadway-lying',-1)">−</button>
-                            <button class="step-btn" onclick="step('f-roadway-lying', 1)">+</button>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <label for="f-cycle-lane-upright">Parked on a cycle lane — <span class="txt-upright">upright</span></label>
-                    <div class="num-row">
-                        <input type="number" id="f-cycle-lane-upright" min="0" value="0" inputmode="numeric">
-                        <div class="steppers">
-                            <button class="step-btn" onclick="step('f-cycle-lane-upright',-1)">−</button>
-                            <button class="step-btn" onclick="step('f-cycle-lane-upright', 1)">+</button>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <label for="f-cycle-lane-lying">Parked on a cycle lane — <span class="txt-lying">lying down</span></label>
-                    <div class="num-row">
-                        <input type="number" id="f-cycle-lane-lying" min="0" value="0" inputmode="numeric">
-                        <div class="steppers">
-                            <button class="step-btn" onclick="step('f-cycle-lane-lying',-1)">−</button>
-                            <button class="step-btn" onclick="step('f-cycle-lane-lying', 1)">+</button>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <label for="f-ramp-upright">Parked blocking an accessible ramp — <span class="txt-upright">upright</span></label>
-                    <div class="num-row">
-                        <input type="number" id="f-ramp-upright" min="0" value="0" inputmode="numeric">
-                        <div class="steppers">
-                            <button class="step-btn" onclick="step('f-ramp-upright',-1)">−</button>
-                            <button class="step-btn" onclick="step('f-ramp-upright', 1)">+</button>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <label for="f-ramp-lying">Parked blocking an accessible ramp — <span class="txt-lying">lying down</span></label>
-                    <div class="num-row">
-                        <input type="number" id="f-ramp-lying" min="0" value="0" inputmode="numeric">
-                        <div class="steppers">
-                            <button class="step-btn" onclick="step('f-ramp-lying',-1)">−</button>
-                            <button class="step-btn" onclick="step('f-ramp-lying', 1)">+</button>
-                        </div>
-                    </div>
-                </div>
-
-                </div>
-            </div>
 
             <!-- Additional Conditions -->
             <div class="form-section">
@@ -1126,7 +877,7 @@
 
                 <div class="checkbox-group" onclick="document.getElementById('f-virtual').click()">
                     <input type="checkbox" id="f-virtual" onclick="event.stopPropagation()">
-                    <label for="f-virtual" onclick="event.stopPropagation()">Virtual parking space</label>
+                    <label for="f-virtual" onclick="event.stopPropagation()">No parking corral markings on ground</label>
                 </div>
             </div>
 
@@ -1222,8 +973,9 @@
             📦 Download ZIP (CSV + Photos)
         </button>
         <p class="export-note">
-            Downloads a ZIP containing <code>observations.csv</code> with all recorded<br>
-            points and coordinates, plus a <code>photos/</code> folder with all images.
+            Downloads a ZIP containing <code>observations.csv</code> (one row per point)<br>
+            and <code>observations_by_vehicle.csv</code> (one row per operator/category<br>
+            combination, ready for analysis), plus a <code>photos/</code> folder with all images.
         </p>
 
         <button class="btn-danger" onclick="confirmClear()">
@@ -1282,7 +1034,7 @@ const CHECKBOX_FIELDS = [
     { id: 'f-skipped', key: 'areaSkipped',   label: 'Area skipped during observation session' },
     { id: 'f-faded',   key: 'fadedMarking',  label: 'Hard to determine allowed parking area due to faded marking' },
     { id: 'f-full',    key: 'parkingFull',   label: 'Parking space full' },
-    { id: 'f-virtual', key: 'virtualSpace',  label: 'Virtual parking space' }
+    { id: 'f-virtual', key: 'virtualSpace',  label: 'No parking corral markings on ground' }
 ];
 
 // ═══════════════════════════════════════════════
@@ -1368,31 +1120,177 @@ const OPERATORS = [
 ];
 
 function renderOperatorChips() {
-    const row = document.getElementById('operator-chip-row');
+    // Renders the per-entry operator picker used inside the "add vehicle" box.
+    const row = document.getElementById('entry-operator-row');
     if (!row) return;
 
-    row.innerHTML = OPERATORS.map(o => `
-        <label class="route-chip" style="--chip-color:${o.color}">
-            <input type="radio" name="f-operator" value="${escHtml(o.name)}" onchange="onOperatorChange(this)">
+    row.innerHTML = OPERATORS.map((o, i) => `
+        <label class="route-chip${i === 0 ? ' selected' : ''}" style="--chip-color:${o.color}">
+            <input type="radio" name="entry-operator" value="${escHtml(o.name)}" onchange="onOperatorChange(this)" ${i === 0 ? 'checked' : ''}>
             <span class="dot"></span>${escHtml(o.name)}
         </label>
     `).join('');
 }
 
 function onOperatorChange(input) {
-    document.querySelectorAll('#operator-chip-row .route-chip').forEach(el => el.classList.remove('selected'));
+    document.querySelectorAll('#entry-operator-row .route-chip').forEach(el => el.classList.remove('selected'));
     input.closest('.route-chip').classList.add('selected');
 }
 
-function getSelectedOperator() {
-    const checked = document.querySelector('input[name="f-operator"]:checked');
-    return checked ? checked.value : '';
+function getSelectedEntryOperator() {
+    const checked = document.querySelector('input[name="entry-operator"]:checked');
+    return checked ? checked.value : (OPERATORS[0] ? OPERATORS[0].name : '');
+}
+
+function operatorColor(name) {
+    const o = OPERATORS.find(x => x.name === name);
+    return o ? o.color : '#999';
+}
+
+// ═══════════════════════════════════════════════
+// Vehicle categories — 13 base parking categories, each split into
+// upright / lying orientation, matching the keys used in CATEGORY_FIELDS.
+// Categories with hasImpede:true additionally require an "impeding /
+// not impeding other road users" choice (surfaced as its own toggle,
+// only shown for the categories that need it) —
+// e.g. base 'partial' + impede 'Impede' + orientation 'Upright' → 'partialImpedeUpright'.
+// Categories without hasImpede map directly, e.g. 'carspace' + 'Upright' → 'carspaceUpright'.
+// ═══════════════════════════════════════════════
+const CATEGORY_TYPES = [
+    { key: 'sq',               label: 'Parked in square',                            correct: true,  hasImpede: false },
+    { key: 'partial',          label: 'Parked partially in square',                   correct: false, hasImpede: true  },
+    { key: 'close',            label: 'Parked close to square',                       correct: false, hasImpede: true  },
+    { key: 'out',              label: 'Parked outside square',                        correct: false, hasImpede: true  },
+    { key: 'bikerack',         label: 'Parked in bike rack',                          correct: true,  hasImpede: false },
+    { key: 'carspace',         label: 'Parked in a car parking space',                correct: false, hasImpede: false },
+    { key: 'disabledSpace',    label: 'Parking in a disabled car parking space',      correct: false, hasImpede: false },
+    { key: 'obstructDoor',     label: 'Parked obstructing a door',                    correct: false, hasImpede: false },
+    { key: 'obstructCrossing', label: 'Parked obstructing a zebra crossing or similar', correct: false, hasImpede: false },
+    { key: 'busTramStop',      label: 'Parked at a bus or tram stop',                 correct: false, hasImpede: false },
+    { key: 'roadway',          label: 'Parked on the roadway',                        correct: false, hasImpede: false },
+    { key: 'cycleLane',        label: 'Parked on a cycle lane',                       correct: false, hasImpede: false },
+    { key: 'ramp',             label: 'Parked blocking an accessible ramp',           correct: false, hasImpede: false }
+];
+
+function categoryFullKey(baseKey, orientation, impede) {
+    const orientSuffix = orientation === 'upright' ? 'Upright' : 'Lying';
+    const impedeSuffix = impede === 'impede' ? 'Impede' : (impede === 'noimpede' ? 'NoImpede' : '');
+    return baseKey + impedeSuffix + orientSuffix;
+}
+
+function renderCategoryOptions() {
+    const sel = document.getElementById('entry-category');
+    if (!sel) return;
+    sel.innerHTML = CATEGORY_TYPES.map(c => `<option value="${escHtml(c.key)}">${escHtml(c.label)}</option>`).join('');
+    onCategoryChange();
+}
+
+function onCategoryChange() {
+    const categoryKey = document.getElementById('entry-category').value;
+    const category     = CATEGORY_TYPES.find(c => c.key === categoryKey);
+    const group        = document.getElementById('entry-impede-group');
+    group.style.display = (category && category.hasImpede) ? 'block' : 'none';
+    if (category && category.hasImpede) {
+        // Reset to the default "Not impeding" choice whenever the impede toggle becomes visible.
+        document.querySelectorAll('#entry-impede-row .orient-btn').forEach((el, i) => el.classList.toggle('selected', i === 1));
+    }
+}
+
+function setOrientation(btn) {
+    document.querySelectorAll('#entry-orientation-row .orient-btn').forEach(el => el.classList.remove('selected'));
+    btn.classList.add('selected');
+}
+
+function getSelectedOrientation() {
+    const sel = document.querySelector('#entry-orientation-row .orient-btn.selected');
+    return sel ? sel.dataset.val : 'upright';
+}
+
+function setImpede(btn) {
+    document.querySelectorAll('#entry-impede-row .orient-btn').forEach(el => el.classList.remove('selected'));
+    btn.classList.add('selected');
+}
+
+function getSelectedImpede() {
+    const sel = document.querySelector('#entry-impede-row .orient-btn.selected');
+    return sel ? sel.dataset.val : 'noimpede';
+}
+
+// ═══════════════════════════════════════════════
+// Vehicle entries — the list of operator/category/orientation/qty
+// combinations added to the observation currently being edited.
+// ═══════════════════════════════════════════════
+let currentEntries = [];
+
+function addVehicleEntry() {
+    const operator    = getSelectedEntryOperator();
+    const categoryKey  = document.getElementById('entry-category').value;
+    const category     = CATEGORY_TYPES.find(c => c.key === categoryKey);
+    const orientation  = getSelectedOrientation();
+    const impede       = category && category.hasImpede ? getSelectedImpede() : null;
+    const qty          = Math.max(1, parseInt(document.getElementById('entry-qty').value) || 1);
+
+    if (!operator)  { showToast('⚠️ Please select an operator');       return; }
+    if (!category)  { showToast('⚠️ Please select a parking category'); return; }
+
+    const impedeText  = impede === 'impede' ? 'impeding road users' : (impede === 'noimpede' ? 'not impeding road users' : '');
+    const fullLabel   = impedeText ? `${category.label} — ${impedeText}` : category.label;
+
+    currentEntries.push({
+        operator,
+        categoryKey,
+        categoryLabel: fullLabel,
+        orientation,
+        impede,
+        correct: category.correct,
+        qty
+    });
+
+    document.getElementById('entry-qty').value = '1';
+    renderVehicleEntries();
+    showToast(`✅ Added ${qty} × ${escHtml(operator)} — ${fullLabel} (${orientation === 'upright' ? 'upright' : 'lying down'})`);
+}
+
+function removeVehicleEntry(index) {
+    currentEntries.splice(index, 1);
+    renderVehicleEntries();
+}
+
+function renderVehicleEntries() {
+    const list  = document.getElementById('vehicle-entries-list');
+    const total = document.getElementById('entries-total');
+    const empty = document.getElementById('entries-empty-note');
+    if (!list) return;
+
+    if (!currentEntries.length) {
+        list.innerHTML = '';
+        total.style.display = 'none';
+        empty.style.display = 'block';
+        return;
+    }
+
+    empty.style.display = 'none';
+    total.style.display = 'block';
+    const sum = currentEntries.reduce((s, e) => s + e.qty, 0);
+    total.textContent = `🛴 ${sum} vehicle${sum !== 1 ? 's' : ''} added so far`;
+
+    list.innerHTML = currentEntries.map((e, i) => `
+        <div class="entry-card">
+            <span class="entry-dot" style="background:${operatorColor(e.operator)}"></span>
+            <div class="entry-info">
+                <b>${escHtml(e.operator)}</b>
+                ${escHtml(e.categoryLabel)} — ${e.orientation === 'upright' ? 'upright' : 'lying down'}
+            </div>
+            <span class="entry-qty">×${e.qty}</span>
+            <button class="entry-remove" onclick="removeVehicleEntry(${i})" aria-label="Remove entry">✕</button>
+        </div>
+    `).join('');
 }
 
 // ═══════════════════════════════════════════════
 // IndexedDB
 // ═══════════════════════════════════════════════
-const DB_NAME  = 'ppgis_escooter_v1';
+const DB_NAME  = 'ppgis_escooter_v3_multioperator';
 const DB_STORE = 'observations';
 let db;
 
@@ -1536,6 +1434,11 @@ function openSheet(latlng) {
     const obsField  = document.getElementById('f-observer');
     if (savedName && !obsField.value) obsField.value = savedName;
 
+    // Restore last selected weather
+    const savedWeather = localStorage.getItem('lastWeather') || '';
+    const weatherField = document.getElementById('f-weather');
+    if (savedWeather && !weatherField.value) weatherField.value = savedWeather;
+
     const overlay  = document.getElementById('sheet-overlay');
     const sheet    = document.getElementById('bottom-sheet');
     const formBody = document.querySelector('#bottom-sheet .form-body');
@@ -1566,12 +1469,17 @@ function handleOverlayClick(e) {
 }
 
 function resetForm() {
-    CATEGORY_FIELDS.forEach(c => { document.getElementById(c.id).value = '0'; });
     CHECKBOX_FIELDS.forEach(c => { document.getElementById(c.id).checked = false; });
-    document.getElementById('f-weather').value = '';
+    document.getElementById('f-weather').value = localStorage.getItem('lastWeather') || '';
     document.getElementById('f-comment').value = '';
-    document.querySelectorAll('input[name="f-operator"]').forEach(el => { el.checked = false; });
-    document.querySelectorAll('#operator-chip-row .route-chip').forEach(el => el.classList.remove('selected'));
+    currentEntries = [];
+    renderVehicleEntries();
+    document.querySelectorAll('#entry-operator-row .route-chip').forEach((el, i) => el.classList.toggle('selected', i === 0));
+    document.querySelectorAll('#entry-operator-row input[name="entry-operator"]').forEach((el, i) => { el.checked = i === 0; });
+    document.getElementById('entry-category').selectedIndex = 0;
+    onCategoryChange();
+    document.querySelectorAll('#entry-orientation-row .orient-btn').forEach((el, i) => el.classList.toggle('selected', i === 0));
+    document.getElementById('entry-qty').value = '1';
     clearAllPhotos();
 }
 
@@ -1648,10 +1556,9 @@ function renderPhotoPreview() {
 async function savePoint() {
     const observer  = document.getElementById('f-observer').value.trim();
     const timeDisp  = document.getElementById('f-time').value;
-    const operator  = getSelectedOperator();
 
-    if (!observer)  { showToast('⚠️ Observer name is required');    return; }
-    if (!operator)  { showToast('⚠️ Please select an operator');    return; }
+    if (!observer)              { showToast('⚠️ Observer name is required');            return; }
+    if (!currentEntries.length) { showToast('⚠️ Please add at least one vehicle');       return; }
 
     const btn = document.getElementById('save-btn');
     btn.disabled    = true;
@@ -1666,7 +1573,8 @@ async function savePoint() {
         observer:    observer,
         comment:     document.getElementById('f-comment').value.trim(),
         route:       getSelectedRoute(),
-        operator:    operator,
+        vehicleEntries: currentEntries.slice(),
+        operators:   [...new Set(currentEntries.map(e => e.operator))],
         photos:      currentPhotos.map(p => ({ name: p.name, blob: p.file }))
     };
 
@@ -1675,19 +1583,25 @@ async function savePoint() {
     rec.mpzName       = mpz ? mpz.name     : null;
     rec.mpzDistanceM  = mpz ? mpz.distance : null;
 
-    CATEGORY_FIELDS.forEach(c => {
-        rec[c.key] = parseInt(document.getElementById(c.id).value) || 0;
+    // Aggregate category totals across all operators for quick map/list display,
+    // using the same key scheme as the previous single-operator version
+    // (e.g. 'sqUpright', 'bikerackLying', …).
+    CATEGORY_FIELDS.forEach(c => { rec[c.key] = 0; });
+    currentEntries.forEach(e => {
+        const fullKey = categoryFullKey(e.categoryKey, e.orientation, e.impede);
+        rec[fullKey] = (rec[fullKey] || 0) + e.qty;
     });
     CHECKBOX_FIELDS.forEach(c => {
         rec[c.key] = document.getElementById(c.id).checked;
     });
-    rec.total = CATEGORY_FIELDS.reduce((s, c) => s + rec[c.key], 0);
+    rec.total = currentEntries.reduce((s, e) => s + e.qty, 0);
 
     try {
         const id = await dbAdd(rec);
         rec.id   = id;
 
         localStorage.setItem('lastObserver', observer);
+        localStorage.setItem('lastWeather', rec.weather || '');
         placeMarker(rec);
         refreshCount();
         closeSheet(false);
@@ -1720,10 +1634,11 @@ function buildPopupHTML(o) {
         <div><b>Observer:</b> ${escHtml(o.observer)}</div>
         <div><b>Time:</b> ${escHtml(o.timeDisplay)}</div>`;
     if (o.route)   html += `<div><b>Route:</b> ${escHtml(o.route)}</div>`;
-    if (o.operator) html += `<div><b>Operator:</b> ${escHtml(o.operator)}</div>`;
+    const operatorsList = getOperatorsList(o);
+    if (operatorsList.length) html += `<div><b>Operators:</b> ${escHtml(operatorsList.join(', '))}</div>`;
     if (o.weather) html += `<div><b>Weather:</b> ${escHtml(o.weather)}</div>`;
-    CATEGORY_FIELDS.forEach(c => {
-        if (o[c.key]) html += `<div>${escHtml(c.label)}: ${o[c.key]}</div>`;
+    getVehicleEntries(o).forEach(e => {
+        html += `<div>${escHtml(e.operator)} — ${escHtml(e.categoryLabel)} (${e.orientation === 'upright' ? 'upright' : 'lying down'}): ${e.qty}</div>`;
     });
     CHECKBOX_FIELDS.forEach(c => {
         if (o[c.key]) html += `<div>✓ ${escHtml(c.label)}</div>`;
@@ -1734,11 +1649,35 @@ function buildPopupHTML(o) {
     return html;
 }
 
+// Supports both the current multi-operator schema (o.vehicleEntries / o.operators)
+// and legacy single-operator records saved before this feature existed.
+function getVehicleEntries(o) {
+    if (Array.isArray(o.vehicleEntries)) return o.vehicleEntries;
+    if (o.operator) {
+        return CATEGORY_FIELDS
+            .filter(c => o[c.key])
+            .map(c => ({
+                operator: o.operator,
+                categoryLabel: c.label.replace(/ - (upright|lying down)$/i, ''),
+                orientation: /lying down$/i.test(c.label) ? 'lying' : 'upright',
+                qty: o[c.key]
+            }));
+    }
+    return [];
+}
+
+function getOperatorsList(o) {
+    if (Array.isArray(o.operators)) return o.operators;
+    if (o.operator) return [o.operator];
+    return [];
+}
+
 function placeMarker(o) {
     const m = L.marker([o.lat, o.lng], { icon: ICON_SAVED }).addTo(map);
     m.bindPopup(buildPopupHTML(o));
     markerIndex[o.id] = m;
 }
+
 
 async function loadAll() {
     const all = await dbGetAll();
@@ -1791,10 +1730,11 @@ async function renderList() {
     const sorted = [...all].reverse();
 
     list.innerHTML = sorted.map(o => {
-        const details = CATEGORY_FIELDS
-            .filter(c => o[c.key])
-            .map(c => `${c.label}: ${o[c.key]}`)
+        const details = getVehicleEntries(o)
+            .map(e => `${escHtml(e.operator)}: ${escHtml(e.categoryLabel)} (${e.orientation === 'upright' ? 'upright' : 'lying down'}) × ${e.qty}`)
             .join(' · ');
+
+        const operatorsList = getOperatorsList(o);
 
         const flags = CHECKBOX_FIELDS
             .filter(c => o[c.key])
@@ -1817,9 +1757,9 @@ async function renderList() {
             <div class="pc-detail">
                 <b>Coords:</b> ${o.lat.toFixed(6)}, ${o.lng.toFixed(6)}<br>
                 ${o.route ? `<b>Route:</b> ${escHtml(o.route)}<br>` : ''}
-                ${o.operator ? `<b>Operator:</b> ${escHtml(o.operator)}<br>` : ''}
+                ${operatorsList.length ? `<b>Operators:</b> ${escHtml(operatorsList.join(', '))}<br>` : ''}
                 ${o.weather ? `<b>Weather:</b> ${escHtml(o.weather)}<br>` : ''}
-                ${details || 'No incorrect parking recorded'}
+                ${details || 'No vehicles recorded'}
                 ${flags ? `<br>${escHtml(flags)}` : ''}
                 ${o.comment ? `<br><b>Comment:</b> ${escHtml(o.comment)}` : ''}
                 ${o.mpzNumero != null ? `<br><b>Nearest MPZ:</b> ${escHtml(o.mpzName || String(o.mpzNumero))} (${o.mpzDistanceM} m)` : ''}
@@ -1847,7 +1787,8 @@ async function updateExportInfo() {
         `<strong>${all.length} observation${all.length !== 1 ? 's' : ''}</strong> recorded on this device<br>
          <strong>${photos} photo${photos !== 1 ? 's' : ''}</strong> attached<br><br>
          ZIP will contain:<br>
-         📄 <code>observations.csv</code> — all data with lon/lat coordinates<br>
+         📄 <code>observations.csv</code> — one row per point, with lon/lat coordinates<br>
+         📄 <code>observations_by_vehicle.csv</code> — one row per operator/category combination<br>
          📷 <code>photos/</code> — all uploaded photographs`;
 }
 
@@ -1865,7 +1806,7 @@ async function exportData() {
         'total_escooters',
         ...CATEGORY_FIELDS.map(c => c.key),
         ...CHECKBOX_FIELDS.map(c => c.key),
-        'timestamp_iso', 'time_display', 'weather', 'observer', 'comment', 'route', 'operator',
+        'timestamp_iso', 'time_display', 'weather', 'observer', 'comment', 'route', 'operators',
         'nearest_mpz_numero', 'nearest_mpz_name', 'nearest_mpz_distance_m',
         'photo_filename_1', 'photo_filename_2', 'photo_filename_3'
     ];
@@ -1885,7 +1826,7 @@ async function exportData() {
             csvCell(o.observer),
             csvCell(o.comment || ''),
             csvCell(o.route || ''),
-            csvCell(o.operator || ''),
+            csvCell(getOperatorsList(o).join('; ')),
             o.mpzNumero != null ? o.mpzNumero : '',
             csvCell(o.mpzName || ''),
             o.mpzDistanceM != null ? o.mpzDistanceM : '',
@@ -1897,6 +1838,44 @@ async function exportData() {
 
     const csv = [headers.join(','), ...csvRows.map(r => r.join(','))].join('\r\n');
     zip.file('observations.csv', csv);
+
+    // Long-format, one row per operator/category/orientation combination —
+    // ready to use for per-vehicle analysis (e.g. logistic regression on
+    // correct vs. incorrect parking with operator as a predictor).
+    const vehicleHeaders = [
+        'observation_id', 'longitude', 'latitude',
+        'operator', 'category_key', 'category_label', 'impeding_road_users', 'orientation', 'quantity', 'incorrectly_parked',
+        'timestamp_iso', 'time_display', 'weather', 'observer', 'route'
+    ];
+
+    const vehicleRows = [];
+    all.forEach(o => {
+        getVehicleEntries(o).forEach(e => {
+            const cat = CATEGORY_TYPES.find(c => c.key === e.categoryKey);
+            const incorrect = e.correct !== undefined ? (e.correct ? 0 : 1) : (cat ? (cat.correct ? 0 : 1) : '');
+            const impeding = e.impede === 'impede' ? 1 : (e.impede === 'noimpede' ? 0 : '');
+            vehicleRows.push([
+                o.id,
+                o.lng.toFixed(7),
+                o.lat.toFixed(7),
+                csvCell(e.operator),
+                csvCell(e.categoryKey || ''),
+                csvCell(e.categoryLabel),
+                impeding,
+                e.orientation,
+                e.qty,
+                incorrect,
+                o.timestamp,
+                csvCell(o.timeDisplay),
+                o.weather || '',
+                csvCell(o.observer),
+                csvCell(o.route || '')
+            ]);
+        });
+    });
+
+    const vehicleCsv = [vehicleHeaders.join(','), ...vehicleRows.map(r => r.join(','))].join('\r\n');
+    zip.file('observations_by_vehicle.csv', vehicleCsv);
 
     for (const o of all) {
         getPhotoList(o).forEach(p => {
@@ -2151,6 +2130,8 @@ loadOverlay();
 async function init() {
     renderRouteChips();
     renderOperatorChips();
+    renderCategoryOptions();
+    renderVehicleEntries();
     await openDB();
     await requestPersist();
     await loadAll();
